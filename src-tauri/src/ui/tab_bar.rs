@@ -3,11 +3,11 @@ use iced::{Alignment, Element, Length, Color, Background, Border};
 use crate::ui::Message;
 use crate::ui::theme::*;
 
-pub fn view() -> Element<'static, Message> {
+pub fn view(tabs: &[crate::ui::TabInfo]) -> Element<'static, Message> {
     container(
         row![
             nav_controls(),
-            tab_list(),
+            tab_list(tabs),
             window_controls(),
         ]
         .width(Length::Fill)
@@ -88,21 +88,21 @@ fn nav_button_style(theme: &iced::Theme, status: button::Status) -> button::Appe
     }
 }
 
-fn tab_list() -> Element<'static, Message> {
-    row![
-        tab("Notion", true),
-        tab("Documentation", false),
+fn tab_list(tabs: &[crate::ui::TabInfo]) -> Element<'static, Message> {
+    let mut tab_row = row![].spacing(0).width(Length::Fill).align_items(Alignment::Center);
+    
+    for tab_info in tabs {
+        tab_row = tab_row.push(tab(&tab_info.title, tab_info.active, &tab_info.id));
+    }
+
+    tab_row.push(
         button(text("+").size(18))
             .on_press(Message::NewTab)
             .style(new_tab_button_style)
-    ]
-    .spacing(0)
-    .width(Length::Fill)
-    .align_items(Alignment::Center)
-    .into()
+    ).into()
 }
 
-fn tab(title: &str, active: bool) -> Element<'static, Message> {
+fn tab(title: &str, active: bool, id: &str) -> Element<'static, Message> {
     container(
         row![
             text("📄").size(14),
@@ -111,7 +111,7 @@ fn tab(title: &str, active: bool) -> Element<'static, Message> {
                 Element::from(text("")) 
             } else {
                 button(text("×").size(16))
-                    .on_press(Message::CloseTab(title.to_string()))
+                    .on_press(Message::CloseTab(id.to_string()))
                     .style(close_button_style)
                     .into()
             }
