@@ -1,6 +1,6 @@
 {
     "productName": "Lotion",
-    "version": "0.1.0",
+    "version": "0.2.0",
     "identifier": "com.lotion.rs",
     "build": {
         "beforeDevCommand": "",
@@ -26,9 +26,16 @@
     },
     "bundle": {
         "active": true,
-        "targets": "all",
+        "targets": [
+            "deb",
+            "rpm",
+            "appimage"
+        ],
         "icon": [
             "../legacy-electron/assets/icon.png"
-        ]
+        ],
+        "category": "Productivity",
+        "shortDescription": "Native Rust client for Notion.so",
+        "longDescription": "Lotion is a native Rust desktop client for Notion.so, built with Tauri v2 and Iced. Features Zero-Trust security, LiteBox sandboxing, and custom theming."
     }
 }

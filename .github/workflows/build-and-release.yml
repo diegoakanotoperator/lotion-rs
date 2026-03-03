@@ -2,34 +2,25 @@ name: Build and Release
 
 on:
   push:
-    branches: [ main, master, feat/v1, feat/v1.5 ]
+    branches: [ main, rust-version ]
     tags: [ 'v*' ]
   pull_request:
-    branches: [ main, master, feat/v1, feat/v1.5 ]
+    branches: [ main, rust-version ]
 
 jobs:
   build:
     strategy:
       matrix:
         include:
-          - os: windows-latest
-            arch: x64
-            platform: win32
-          - os: windows-latest
-            arch: ia32
-            platform: win32
-          - os: macos-latest
-            arch: x64
-            platform: darwin
-          - os: macos-latest
-            arch: arm64
-            platform: darwin
           - os: ubuntu-latest
-            arch: x64
+            target: x86_64-unknown-linux-gnu
             platform: linux
-          - os: ubuntu-latest
-            arch: arm64
-            platform: linux
+          - os: macos-latest
+            target: x86_64-apple-darwin
+            platform: macos-x64
+          - os: macos-latest
+            target: aarch64-apple-darwin
+            platform: macos-arm64
 
     runs-on: ${{ matrix.os }}
     
@@ -37,25 +28,41 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
 
-    - name: Setup Node.js
-      uses: actions/setup-node@v4
+    - name: Install Linux system dependencies
+      if: matrix.os == 'ubuntu-latest'
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y libwebkit2gtk-4.1-dev build-essential curl wget file libxdo-dev libssl-dev libayatana-appindicator3-dev librsvg2-dev
+
+    - name: Setup Rust
+      uses: dtolnay/rust-toolchain@stable
       with:
-        node-version: '18'
-        cache: 'npm'
+        targets: ${{ matrix.target }}
 
-    - name: Install dependencies
-      run: npm ci
+    - name: Cache cargo
+      uses: actions/cache@v4
+      with:
+        path: |
+          ~/.cargo/registry
+          ~/.cargo/git
+          src-tauri/target
+        key: ${{ runner.os }}-${{ matrix.target }}-cargo-${{ hashFiles('src-tauri/Cargo.lock') }}
 
-    - name: Build application
-      run: npm run make -- --arch=${{ matrix.arch }} --platform=${{ matrix.platform }}
+    - name: Install Tauri CLI
+      run: cargo install tauri-cli --version "^2.0"
+
+    - name: Build Tauri application
+      working-directory: src-tauri
+      run: cargo tauri build --target ${{ matrix.target }}
       env:
-        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
     - name: Upload artifacts
       uses: actions/upload-artifact@v4
       with:
-        name: lotion-${{ matrix.platform }}-${{ matrix.arch }}
-        path: out/make/**/*
+        name: lotion-${{ matrix.platform }}
+        path: |
+          src-tauri/target/${{ matrix.target }}/release/bundle/**/*
         retention-days: 30
 
   release:
@@ -72,65 +79,31 @@ jobs:
       with:
         path: artifacts/
 
-    - name: Display structure of downloaded files
-      run: ls -la artifacts/
+    - name: Display artifacts
+      run: find artifacts/ -type f | head -50
 
     - name: Create Release
-      id: create_release
-      uses: actions/create-release@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      uses: softprops/action-gh-release@v2
       with:
         tag_name: ${{ github.ref_name }}
-        release_name: Lotion ${{ github.ref_name }}
+        name: Lotion ${{ github.ref_name }}
         body: |
           ## Lotion ${{ github.ref_name }}
-          
-          Unofficial Notion.so Desktop App for Linux, Windows, and macOS.
-          
+
+          Native Rust desktop client for Notion.so — built with Tauri v2 + Iced.
+
           ### Features
-          - Native desktop experience
-          - Cross-platform support
-          - Navigation controls (Back/Forward/Refresh)
-          - Keyboard shortcuts
-          - Native menu integration
-          
+          - Native Iced UI chrome (tab bar, navigation, window controls)
+          - Zero-Trust security enforcement
+          - LiteBox sandboxing
+          - Theme support (Dracula, Nord, custom CSS)
+          - Config persistence (TOML)
+
           ### Installation
-          - **Windows**: Download and run the `.exe` installer
-          - **macOS**: Download the `.zip` file and extract to Applications
-          - **Linux**: Download the `.deb` (Ubuntu/Debian) or `.rpm` (RHEL/Fedora) package
-          
-          ### Changes
-          See commit history for detailed changes.
+          - **Linux**: Download `.deb` (Ubuntu/Debian), `.rpm` (Fedora/RHEL), or `.AppImage`
+          - **macOS**: Download the `.dmg` file
+        files: artifacts/**/*
         draft: false
         prerelease: false
-
-    - name: Upload Release Assets
-      run: |
-        # Find and upload all built packages
-        find artifacts/ -type f \( -name "*.exe" -o -name "*.dmg" -o -name "*.deb" -o -name "*.rpm" -o -name "*.zip" -o -name "*.tar.gz" \) | while read file; do
-          echo "Uploading $file"
-          gh release upload ${{ github.ref_name }} "$file" --clobber
-        done
       env:
-        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-  # Optional: Auto-update check
-  check-updates:
-    runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master' || github.ref == 'refs/heads/feat/v1' || github.ref == 'refs/heads/feat/v1.5'
-    
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-
-    - name: Setup Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: '18'
-        cache: 'npm'
-
-    - name: Check for dependency updates
-      run: |
-        npm outdated || true
-        echo "Consider updating outdated dependencies" 
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
