@@ -1,0 +1,34 @@
+{
+    "productName": "Lotion",
+    "version": "0.1.0",
+    "identifier": "com.lotion.rs",
+    "build": {
+        "beforeDevCommand": "",
+        "devUrl": "http://localhost:1420",
+        "beforeBuildCommand": "",
+        "frontendDist": "dist"
+    },
+    "app": {
+        "windows": [
+            {
+                "title": "Lotion",
+                "width": 1200,
+                "height": 800,
+                "resizable": true,
+                "fullscreen": false,
+                "decorations": false,
+                "transparent": false
+            }
+        ],
+        "security": {
+            "csp": null
+        }
+    },
+    "bundle": {
+        "active": true,
+        "targets": "all",
+        "icon": [
+            "../legacy-electron/assets/icon.png"
+        ]
+    }
+}
