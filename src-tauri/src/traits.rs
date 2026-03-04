@@ -10,6 +10,8 @@ pub trait SecuritySandbox: Send + Sync {
 pub trait TabOrchestrator: Send + Sync {
     fn create_tab(&self, app: &AppHandle, window_id: &str, url: &str) -> tauri::Result<String>;
     fn destroy_tab(&self, tab_id: &str) -> tauri::Result<()>;
+    fn get_tab_ids(&self) -> Vec<String>;
+    fn inject_theme_into_tab(&self, app: &AppHandle, tab_id: &str, theme_name: &str) -> tauri::Result<()>;
 }
 
 /// Interface for window management
@@ -25,6 +27,8 @@ pub trait PolicyEnforcer: Send + Sync {
     fn telemetry_allowed(&self) -> bool;
     /// Returns true if an external link is safe to open in the system browser
     fn validate_external_link(&self, url: &str) -> bool;
+    /// Returns true if a popup request (like OAuth) should be routed to the system browser
+    fn should_route_popup_to_system_browser(&self, url: &str) -> bool;
 }
 
 /// Interface for the CSS/JS Theming Engine

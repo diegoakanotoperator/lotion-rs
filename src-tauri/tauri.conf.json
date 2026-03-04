@@ -3,23 +3,18 @@
     "version": "0.2.0",
     "identifier": "com.lotion.rs",
     "build": {
-        "beforeDevCommand": "",
-        "devUrl": "http://localhost:1420",
-        "beforeBuildCommand": "",
-        "frontendDist": "dist"
+        "frontendDist": "assets"
+    },
+    "plugins": {
+        "updater": {
+            "endpoints": [
+                "https://example.com/update/{{target}}/{{current_version}}"
+            ],
+            "dialog": true,
+            "pubkey": "dW5kZWZpbmVk"
+        }
     },
     "app": {
-        "windows": [
-            {
-                "title": "Lotion",
-                "width": 1200,
-                "height": 800,
-                "resizable": true,
-                "fullscreen": false,
-                "decorations": false,
-                "transparent": false
-            }
-        ],
         "security": {
             "csp": null
         }
@@ -32,10 +27,16 @@
             "appimage"
         ],
         "icon": [
-            "../legacy-electron/assets/icon.png"
+            "assets/icon.png",
+            "assets/icon.ico",
+            "assets/icon.icns"
         ],
         "category": "Productivity",
         "shortDescription": "Native Rust client for Notion.so",
-        "longDescription": "Lotion is a native Rust desktop client for Notion.so, built with Tauri v2 and Iced. Features Zero-Trust security, LiteBox sandboxing, and custom theming."
+        "longDescription": "Lotion is a native Rust desktop client for Notion.so, built with Tauri v2 and Iced. Features Zero-Trust security, LiteBox sandboxing, and custom theming.",
+        "resources": [
+            "assets/*",
+            "i18n/**/*"
+        ]
     }
 }

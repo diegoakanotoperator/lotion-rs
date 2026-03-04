@@ -1,5 +1,6 @@
-use iced::widget::{button, row, text, container, image};
-use iced::{Alignment, Element, Length, Color, Background, Border};
+use iced::widget::{button, row, text, container};
+use iced::widget::button::Appearance;
+use iced::{Alignment, Element, Length, Color, Background, Border, Theme};
 use crate::ui::Message;
 use crate::ui::theme::*;
 
@@ -19,7 +20,7 @@ pub fn view(tabs: &[crate::ui::TabInfo]) -> Element<'static, Message> {
     .into()
 }
 
-fn container_style(_theme: &iced::Theme) -> container::Appearance {
+fn container_style(_theme: &Theme) -> container::Appearance {
     container::Appearance {
         background: Some(Background::Color(LIGHT_BG_PRIMARY)),
         border: Border {
@@ -48,7 +49,7 @@ fn app_logo() -> Element<'static, Message> {
     container(
         text("L")
             .size(14)
-            .color(LIGHT_TEXT_PRIMARY)
+            .style(iced::theme::Text::Color(LIGHT_TEXT_PRIMARY))
     )
     .width(Length::Fixed(22.0))
     .height(Length::Fixed(22.0))
@@ -66,25 +67,29 @@ fn nav_button(label: &str, msg: Message) -> Element<'static, Message> {
             .center_y()
     )
     .on_press(msg)
-    .style(nav_button_style)
+    .style(iced::theme::Button::custom(NavButtonStyle))
     .into()
 }
 
-fn nav_button_style(theme: &iced::Theme, status: button::Status) -> button::Appearance {
-    match status {
-        button::Status::Hovered => button::Appearance {
+struct NavButtonStyle;
+impl button::StyleSheet for NavButtonStyle {
+    type Style = Theme;
+    fn active(&self, _theme: &Theme) -> Appearance {
+        Appearance {
+            background: None,
+            border: Border::default(),
+            ..Default::default()
+        }
+    }
+    fn hovered(&self, _theme: &Theme) -> Appearance {
+        Appearance {
             background: Some(Background::Color(LIGHT_BG_TAB)),
             border: Border {
                 radius: 4.0.into(),
                 ..Default::default()
             },
             ..Default::default()
-        },
-        _ => button::Appearance {
-            background: None,
-            border: Border::default(),
-            ..Default::default()
-        },
+        }
     }
 }
 
@@ -98,21 +103,38 @@ fn tab_list(tabs: &[crate::ui::TabInfo]) -> Element<'static, Message> {
     tab_row.push(
         button(text("+").size(18))
             .on_press(Message::NewTab)
-            .style(new_tab_button_style)
+            .style(iced::theme::Button::custom(NewTabButtonStyle))
     ).into()
+}
+
+struct NewTabButtonStyle;
+impl button::StyleSheet for NewTabButtonStyle {
+    type Style = Theme;
+    fn active(&self, _theme: &Theme) -> Appearance {
+        Appearance {
+            background: None,
+            ..Default::default()
+        }
+    }
+    fn hovered(&self, _theme: &Theme) -> Appearance {
+        Appearance {
+            background: Some(Background::Color(LIGHT_BG_TAB)),
+            ..Default::default()
+        }
+    }
 }
 
 fn tab(title: &str, active: bool, id: &str) -> Element<'static, Message> {
     container(
         row![
             text("📄").size(14),
-            text(title).size(13).color(LIGHT_TEXT_PRIMARY),
+            text(title).size(13).style(iced::theme::Text::Color(LIGHT_TEXT_PRIMARY)),
             if active { 
                 Element::from(text("")) 
             } else {
                 button(text("×").size(16))
                     .on_press(Message::CloseTab(id.to_string()))
-                    .style(close_button_style)
+                    .style(iced::theme::Button::custom(CloseButtonStyle))
                     .into()
             }
         ]
@@ -122,19 +144,26 @@ fn tab(title: &str, active: bool, id: &str) -> Element<'static, Message> {
     )
     .width(Length::Fixed(150.0))
     .height(Length::Fill)
-    .style(move |_| tab_style(active))
+    .style(iced::theme::Container::Custom(Box::new(TabContainerStyle { active })))
     .into()
 }
 
-fn tab_style(active: bool) -> container::Appearance {
-    container::Appearance {
-        background: Some(Background::Color(if active { LIGHT_BG_TAB_ACTIVE } else { LIGHT_BG_TAB })),
-        border: Border {
-            color: LIGHT_BORDER_COLOR,
-            width: if active { 0.0 } else { 0.0 },
-            radius: 0.0.into(),
-        },
-        ..Default::default()
+struct TabContainerStyle {
+    active: bool,
+}
+
+impl container::StyleSheet for TabContainerStyle {
+    type Style = Theme;
+    fn appearance(&self, _style: &Self::Style) -> container::Appearance {
+        container::Appearance {
+            background: Some(Background::Color(if self.active { LIGHT_BG_TAB_ACTIVE } else { LIGHT_BG_TAB })),
+            border: Border {
+                color: LIGHT_BORDER_COLOR,
+                width: 0.0,
+                radius: 0.0.into(),
+            },
+            ..Default::default()
+        }
     }
 }
 
@@ -157,49 +186,44 @@ fn window_control_button(label: &str, msg: Message) -> Element<'static, Message>
             .center_y()
     )
     .on_press(msg)
-    .style(window_control_style)
+    .style(iced::theme::Button::custom(WindowControlStyle))
     .into()
 }
 
-fn window_control_style(theme: &iced::Theme, status: button::Status) -> button::Appearance {
-    match status {
-        button::Status::Hovered => button::Appearance {
-            background: Some(Background::Color(LIGHT_BG_TAB)),
-            ..Default::default()
-        },
-        _ => button::Appearance {
+struct WindowControlStyle;
+impl button::StyleSheet for WindowControlStyle {
+    type Style = Theme;
+    fn active(&self, _theme: &Theme) -> Appearance {
+        Appearance {
             background: None,
             ..Default::default()
-        },
+        }
+    }
+    fn hovered(&self, _theme: &Theme) -> Appearance {
+        Appearance {
+            background: Some(Background::Color(LIGHT_BG_TAB)),
+            ..Default::default()
+        }
     }
 }
 
-fn new_tab_button_style(theme: &iced::Theme, status: button::Status) -> button::Appearance {
-    match status {
-        button::Status::Hovered => button::Appearance {
-            background: Some(Background::Color(LIGHT_BG_TAB)),
-            ..Default::default()
-        },
-        _ => button::Appearance {
+struct CloseButtonStyle;
+impl button::StyleSheet for CloseButtonStyle {
+    type Style = Theme;
+    fn active(&self, _theme: &Theme) -> Appearance {
+        Appearance {
             background: None,
             ..Default::default()
-        },
+        }
     }
-}
-
-fn close_button_style(theme: &iced::Theme, status: button::Status) -> button::Appearance {
-    match status {
-        button::Status::Hovered => button::Appearance {
+    fn hovered(&self, _theme: &Theme) -> Appearance {
+        Appearance {
             background: Some(Background::Color(Color::from_rgba(0.0, 0.0, 0.0, 0.1))),
             border: Border {
                 radius: 3.0.into(),
                 ..Default::default()
             },
             ..Default::default()
-        },
-        _ => button::Appearance {
-            background: None,
-            ..Default::default()
-        },
+        }
     }
 }

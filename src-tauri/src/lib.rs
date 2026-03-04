@@ -9,3 +9,6 @@ pub mod policy;
 pub mod menu;
 pub mod state;
 pub mod config;
+pub mod i18n;
+pub mod spellcheck;
+

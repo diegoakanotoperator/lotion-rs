@@ -1,0 +1,113 @@
+name: Project Integrity
+
+# Validates project hygiene on every push/PR:
+#   - All required assets are present (icons, desktop file, banner)
+#   - tauri.conf.json is valid JSON
+#   - Cargo.toml version matches tauri.conf.json version
+#   - README.md is present and non-empty
+on:
+  push:
+    branches: [main, develop]
+    paths:
+      - "src-tauri/assets/**"
+      - "src-tauri/tauri.conf.json"
+      - "src-tauri/Cargo.toml"
+      - "README.md"
+      - ".github/workflows/integrity.yml"
+  pull_request:
+    branches: [main, develop]
+
+jobs:
+  integrity:
+    name: Project Integrity Checks
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # ── Required assets ────────────────────────────────────────
+      - name: Verify required assets
+        run: |
+          echo "==> Checking required assets..."
+          MISSING=0
+          assets=(
+            "src-tauri/assets/icon.png"
+            "src-tauri/assets/icon.ico"
+            "src-tauri/assets/icon.icns"
+            "src-tauri/assets/Banner.png"
+            "src-tauri/assets/lotion.desktop"
+          )
+          for asset in "${assets[@]}"; do
+            if [ -f "$asset" ]; then
+              echo "  ✓ $asset"
+            else
+              echo "  ✗ MISSING: $asset"
+              MISSING=1
+            fi
+          done
+          exit $MISSING
+
+      # ── tauri.conf.json is valid JSON ──────────────────────────
+      - name: Validate tauri.conf.json
+        run: |
+          echo "==> Validating tauri.conf.json..."
+          python3 -c "
+          import json, sys
+          try:
+              with open('src-tauri/tauri.conf.json') as f:
+                  data = json.load(f)
+              print('  ✓ tauri.conf.json is valid JSON')
+              print(f'  ✓ productName = {data[\"productName\"]}')
+              print(f'  ✓ version = {data[\"version\"]}')
+          except Exception as e:
+              print(f'  ✗ {e}')
+              sys.exit(1)
+          "
+
+      # ── Cargo version == tauri.conf.json version ──────────────
+      - name: Check version consistency
+        run: |
+          echo "==> Checking version parity..."
+          CARGO_VER=$(grep '^version' src-tauri/Cargo.toml | head -1 | sed 's/.*"\(.*\)".*/\1/')
+          TAURI_VER=$(python3 -c "import json; print(json.load(open('src-tauri/tauri.conf.json'))['version'])")
+
+          echo "  Cargo.toml version:       $CARGO_VER"
+          echo "  tauri.conf.json version:  $TAURI_VER"
+
+          if [ "$CARGO_VER" = "$TAURI_VER" ]; then
+            echo "  ✓ Versions match"
+          else
+            echo "  ✗ Version mismatch! Update both files before releasing."
+            exit 1
+          fi
+
+      # ── README is present and non-trivial ─────────────────────
+      - name: Verify README
+        run: |
+          echo "==> Checking README.md..."
+          if [ ! -f README.md ]; then
+            echo "  ✗ README.md missing"
+            exit 1
+          fi
+          LINES=$(wc -l < README.md)
+          echo "  README.md has $LINES lines"
+          if [ "$LINES" -lt 20 ]; then
+            echo "  ✗ README.md seems too short (< 20 lines). Please keep it updated."
+            exit 1
+          fi
+          echo "  ✓ README.md present and non-trivial"
+
+      # ── desktop file is well-formed ───────────────────────────
+      - name: Validate .desktop file
+        run: |
+          echo "==> Validating lotion.desktop..."
+          DESKTOP="src-tauri/assets/lotion.desktop"
+          for field in "Name=" "Exec=" "Icon=" "Type=" "Categories="; do
+            if grep -q "^${field}" "$DESKTOP"; then
+              echo "  ✓ $field present"
+            else
+              echo "  ✗ $field missing from $DESKTOP"
+              exit 1
+            fi
+          done

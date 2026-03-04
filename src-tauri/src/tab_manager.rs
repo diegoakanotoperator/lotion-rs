@@ -14,6 +14,20 @@ impl TabOrchestrator for TabManager {
     fn destroy_tab(&self, tab_id: &str) -> tauri::Result<()> {
         self.destroy_tab(tab_id)
     }
+
+    fn get_tab_ids(&self) -> Vec<String> {
+        let tabs = self.tabs.lock().unwrap();
+        tabs.keys().cloned().collect()
+    }
+
+    fn inject_theme_into_tab(&self, app: &AppHandle, tab_id: &str, theme_name: &str) -> tauri::Result<()> {
+        let tabs = self.tabs.lock().unwrap();
+        if let Some(tab) = tabs.get(tab_id) {
+            let theming = app.state::<Arc<dyn crate::traits::ThemingEngine>>();
+            theming.inject_theme(&tab.webview, theme_name);
+        }
+        Ok(())
+    }
 }
 
 pub struct TabManager {

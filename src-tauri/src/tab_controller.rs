@@ -1,8 +1,9 @@
-use tauri::{AppHandle, Manager, WebviewBuilder, WebviewUrl, Webview};
+use tauri::{AppHandle, Manager, WebviewUrl, Url, WebviewBuilder};
+use tauri::webview::Webview;
 use std::sync::Arc;
 use crate::litebox::LiteBox;
 use crate::litebox::host::HostPlatform;
-use crate::traits::PolicyEnforcer;
+use crate::traits::{PolicyEnforcer, ThemingEngine};
 
 pub struct TabController {
     pub tab_id: String,
@@ -15,43 +16,85 @@ impl TabController {
         app: &AppHandle,
         window_id: &str,
         tab_id: String,
-        url: &str,
-        litebox: Arc<LiteBox<HostPlatform>>,
+        url_str: &str,
+        _litebox: Arc<LiteBox<HostPlatform>>,
     ) -> tauri::Result<Self> {
-        let policy = app.state::<Arc<dyn PolicyEnforcer>>();
+        let policy = app.state::<Arc<dyn PolicyEnforcer>>().inner().clone();
         
         // Zero-Trust Enforcement: Validate URL before creation
-        if !policy.validate_url(url) {
-            return Err(tauri::Error::AssetNotFound(format!("Zero-Trust Policy Blocked: {}", url)));
+        if !policy.validate_url(url_str) {
+            return Err(tauri::Error::AssetNotFound(format!("Zero-Trust Policy Blocked: {}", url_str)));
         }
 
-        let window = app.get_webview_window(window_id).ok_or(
+        let window = app.get_window(window_id).ok_or(
             tauri::Error::AssetNotFound(format!("Window {} not found", window_id))
         )?;
 
+        let url = url_str.parse::<Url>().map_err(|e| tauri::Error::AssetNotFound(e.to_string()))?;
+
         // Create a new webview for this tab
-        let mut webview_builder = WebviewBuilder::new(&tab_id, WebviewUrl::App(url.parse().unwrap()));
+        let mut webview_builder = WebviewBuilder::new(&tab_id, WebviewUrl::External(url.clone()));
         
         // Zero-Trust: Intercept all navigation requests
         let policy_cloned = policy.clone();
-        webview_builder = webview_builder.on_navigation(move |url| {
-            let url_str = url.as_str();
-            if policy_cloned.validate_url(url_str) {
-                true // Allow internal navigation to Notion
-            } else if policy_cloned.validate_external_link(url_str) {
-                log::info!("Zero-Trust: Opening validated external link in default browser: {}", url_str);
-                let _ = opener::open(url_str);
-                false // Block navigation in the webview
-            } else {
-                log::warn!("Zero-Trust: BLOCKED unauthorized navigation attempt to: {}", url_str);
-                false // Block everything else
-            }
-        });
+        let app_handle = app.clone();
+        webview_builder = webview_builder
+            .on_navigation({
+                let app_handle = app_handle.clone();
+                move |url| {
+                    let url_str = url.as_str();
+                    if policy_cloned.validate_url(url_str) {
+                        true // Allow internal navigation to Notion
+                    } else if policy_cloned.validate_external_link(url_str) {
+                        log::info!("Zero-Trust: Opening validated external link in default browser: {}", url_str);
+                        use tauri_plugin_shell::ShellExt;
+                        #[allow(deprecated)]
+                        let _ = app_handle.shell().open(url_str.to_string(), None);
+                        false // Block navigation in the webview
+                    } else {
+                        log::warn!("Zero-Trust: BLOCKED unauthorized navigation attempt to: {}", url_str);
+                        false // Block everything else
+                    }
+                }
+            })
+            .on_new_window({
+                let app_handle = app_handle.clone();
+                let policy_cloned = policy.clone();
+                move |url, _| {
+                    use tauri_plugin_shell::ShellExt;
+                    let url_str = url.as_str();
+
+                    if policy_cloned.should_route_popup_to_system_browser(url_str) {
+                        log::info!("Routing new window request (popup) to system browser: {}", url_str);
+                        #[allow(deprecated)]
+                        let _ = app_handle.shell().open(url_str.to_string(), None);
+                        tauri::webview::NewWindowResponse::Deny
+                    } else {
+                        // Manually create a controlled window for OAuth/Notion popups
+                        // This ensures they are resizable, decorated, and handle window.close() correctly
+                        let label = format!("popup-{}", uuid::Uuid::new_v4());
+                        log::info!("Creating controlled in-app popup for: {}", url_str);
+                        
+                        let _ = tauri::WebviewWindowBuilder::new(&app_handle, label, tauri::WebviewUrl::External(url.clone()))
+                            .title("Lotion Login")
+                            .inner_size(800.0, 600.0)
+                            .resizable(true)
+                            .decorations(true)
+                            .always_on_top(true)
+                            .build();
+                            
+                        tauri::webview::NewWindowResponse::Deny
+                    }
+                }
+            });
 
         let webview = window.add_child(
             webview_builder,
-            tauri::LogicalPosition::new(0.0, 32.0), // Below tab bar
-            tauri::LogicalSize::new(window.inner_size().unwrap().width as f64, (window.inner_size().unwrap().height as f64) - 32.0),
+            tauri::LogicalPosition::new(0.0, 32.0),
+            tauri::LogicalSize::new(
+                window.inner_size().unwrap().width as f64, 
+                (window.inner_size().unwrap().height as f64) - 32.0
+            )
         )?;
 
         log::info!("Created tab webview: {} in window: {}", tab_id, window_id);
@@ -62,7 +105,6 @@ impl TabController {
         theming.inject_theme(&webview, &active_theme);
 
         // Inject title observer — watches for document.title changes and logs them
-        // In a full implementation, this would send IPC messages back to the Rust side
         let title_observer_js = format!(r#"
             (function() {{
                 const tabId = '{}';
@@ -71,7 +113,7 @@ impl TabController {
                     if (document.title !== lastTitle) {{
                         lastTitle = document.title;
                         console.log('[lotion-title-sync] tab=' + tabId + ' title=' + lastTitle);
-                        // In production, this would use window.__TAURI__.invoke()
+                        window.__TAURI__.invoke('update_tab_title', {{ tabId: tabId, title: lastTitle }});
                     }}
                 }});
                 observer.observe(document.querySelector('title') || document.head, {{
@@ -82,6 +124,47 @@ impl TabController {
             }})();
         "#, tab_id);
         let _ = webview.eval(&title_observer_js);
+
+        // Inject network monitor — intercepts fetch and XHR to log status/errors
+        let network_monitor_js = r#"
+            (function() {
+                const log = (msg) => {
+                    console.log(msg);
+                    if (window.__TAURI__) {
+                        window.__TAURI__.invoke('log_network_event', { event: msg });
+                    }
+                };
+
+                // Monitor Fetch
+                const originalFetch = window.fetch;
+                window.fetch = async (...args) => {
+                    const url = args[0] instanceof Request ? args[0].url : args[0];
+                    try {
+                        const response = await originalFetch(...args);
+                        log(`FETCH SUCCESS: ${response.status} ${url}`);
+                        return response;
+                    } catch (error) {
+                        log(`FETCH ERROR: ${url} - ${error.message}`);
+                        throw error;
+                    }
+                };
+
+                // Monitor XHR
+                const originalOpen = XMLHttpRequest.prototype.open;
+                XMLHttpRequest.prototype.open = function(method, url) {
+                    this._url = url;
+                    this.addEventListener('load', function() {
+                        log(`XHR SUCCESS: ${this.status} ${this._url}`);
+                    });
+                    this.addEventListener('error', function() {
+                        log(`XHR ERROR: ${this._url}`);
+                    });
+                    return originalOpen.apply(this, arguments);
+                };
+                log('Network monitoring active.');
+            })();
+        "#;
+        let _ = webview.eval(network_monitor_js);
 
         Ok(Self {
             tab_id,
@@ -100,7 +183,8 @@ impl TabController {
         }
 
         log::info!("Tab {}: Loading URL {}", self.tab_id, url);
-        self.webview.navigate(WebviewUrl::App(url.parse().unwrap()))?;
+        let url = url.parse::<Url>().map_err(|e| tauri::Error::AssetNotFound(e.to_string()))?;
+        self.webview.navigate(url)?;
         Ok(())
     }
 

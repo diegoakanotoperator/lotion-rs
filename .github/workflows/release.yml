@@ -1,82 +1,304 @@
-name: Create Release
+name: Release
 
+# Triggered automatically when a version tag is pushed (e.g. v0.3.0).
+# This workflow:
+#   1. Re-uses the Build workflow via workflow_call to produce all bundles.
+#   2. Generates a CHANGELOG from git log since the previous tag.
+#   3. Creates a signed GitHub Release with all bundles attached.
+#
+# How to release:
+#   git tag -a v0.3.0 -m "Release v0.3.0"
+#   git push origin v0.3.0
 on:
+  push:
+    tags:
+      - "v[0-9]+.[0-9]+.[0-9]+"        # e.g. v1.2.3
+      - "v[0-9]+.[0-9]+.[0-9]+-*"      # e.g. v1.2.3-rc.1
+
+  # Allow triggering a release manually from the Actions tab.
   workflow_dispatch:
     inputs:
-      version_type:
-        description: 'Version bump type'
+      tag:
+        description: "Tag to release (must already exist, e.g. v0.3.0)"
         required: true
-        default: 'patch'
-        type: choice
-        options:
-          - patch
-          - minor
-          - major
-      release_notes:
-        description: 'Release notes'
-        required: false
-        default: 'Bug fixes and improvements'
+
+permissions:
+  contents: write   # needed to create the GitHub Release
+
+env:
+  CARGO_TERM_COLOR: always
+  RUST_BACKTRACE: 1
 
 jobs:
-  create-release:
+  # ────────────────────────────────────────────────────────────────
+  # 1. Build all platform bundles
+  # ────────────────────────────────────────────────────────────────
+  build-linux:
+    name: Build — Linux x86_64
     runs-on: ubuntu-latest
-    
+
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-      with:
-        token: ${{ secrets.GITHUB_TOKEN }}
-        fetch-depth: 0
+      - uses: actions/checkout@v4
 
-    - name: Setup Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: '18'
-        cache: 'npm'
+      - name: Install Linux system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libwebkit2gtk-4.1-dev \
+            build-essential curl wget file \
+            libxdo-dev libssl-dev \
+            libayatana-appindicator3-dev \
+            librsvg2-dev \
+            libhunspell-dev \
+            rpm
 
-    - name: Install dependencies
-      run: npm ci
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-unknown-linux-gnu
 
-    - name: Configure git
-      run: |
-        git config --local user.email "action@github.com"
-        git config --local user.name "GitHub Action"
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            src-tauri/target
+          key: rel-linux-x86_64-${{ hashFiles('src-tauri/Cargo.lock') }}
+          restore-keys: rel-linux-x86_64-
 
-    - name: Bump version
-      run: |
-        npm version ${{ github.event.inputs.version_type }} --no-git-tag-version
-        NEW_VERSION=$(node -p "require('./package.json').version")
-        echo "NEW_VERSION=v$NEW_VERSION" >> $GITHUB_ENV
+      - uses: cargo-bins/cargo-binstall@main
+      - run: cargo binstall --no-confirm tauri-cli@^2
 
-    - name: Update CHANGELOG
-      run: |
-        echo "## ${{ env.NEW_VERSION }} - $(date +'%Y-%m-%d')" > temp_changelog.md
-        echo "" >> temp_changelog.md
-        echo "${{ github.event.inputs.release_notes }}" >> temp_changelog.md
-        echo "" >> temp_changelog.md
-        if [ -f CHANGELOG.md ]; then
-          cat CHANGELOG.md >> temp_changelog.md
-        fi
-        mv temp_changelog.md CHANGELOG.md
+      - name: Build bundles
+        working-directory: src-tauri
+        run: cargo tauri build --target x86_64-unknown-linux-gnu
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
 
-    - name: Commit changes
-      run: |
-        git add package.json package-lock.json CHANGELOG.md
-        git commit -m "chore: bump version to ${{ env.NEW_VERSION }}"
-        git push origin main
+      - name: Stage bundles
+        run: |
+          mkdir -p staging
+          find src-tauri/target/x86_64-unknown-linux-gnu/release/bundle \
+            \( -name "*.deb" -o -name "*.rpm" -o -name "*.AppImage" \) \
+            -exec cp {} staging/ \;
+          ls -lh staging/
 
-    - name: Create and push tag
-      run: |
-        git tag ${{ env.NEW_VERSION }}
-        git push origin ${{ env.NEW_VERSION }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: bundles-linux-x86_64
+          path: staging/
+          if-no-files-found: error
 
-    - name: Create GitHub Release
-      uses: actions/create-release@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        tag_name: ${{ env.NEW_VERSION }}
-        release_name: Lotion ${{ env.NEW_VERSION }}
-        body: ${{ github.event.inputs.release_notes }}
-        draft: false
-        prerelease: false 
+  build-macos-x64:
+    name: Build — macOS x86_64 (Intel)
+    runs-on: macos-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-apple-darwin
+
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            src-tauri/target
+          key: rel-macos-x86_64-${{ hashFiles('src-tauri/Cargo.lock') }}
+          restore-keys: rel-macos-x86_64-
+
+      - uses: cargo-bins/cargo-binstall@main
+      - run: cargo binstall --no-confirm tauri-cli@^2
+
+      - name: Build bundles
+        working-directory: src-tauri
+        run: cargo tauri build --target x86_64-apple-darwin
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_ID_PASSWORD: ${{ secrets.APPLE_ID_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+
+      - name: Stage bundles
+        run: |
+          mkdir -p staging
+          find src-tauri/target/x86_64-apple-darwin/release/bundle \
+            \( -name "*.dmg" -o -name "*.app.tar.gz" \) \
+            -exec cp {} staging/ \;
+          ls -lh staging/
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: bundles-macos-x86_64
+          path: staging/
+          if-no-files-found: error
+
+  build-macos-arm64:
+    name: Build — macOS aarch64 (Apple Silicon)
+    runs-on: macos-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-apple-darwin
+
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            src-tauri/target
+          key: rel-macos-aarch64-${{ hashFiles('src-tauri/Cargo.lock') }}
+          restore-keys: rel-macos-aarch64-
+
+      - uses: cargo-bins/cargo-binstall@main
+      - run: cargo binstall --no-confirm tauri-cli@^2
+
+      - name: Build bundles
+        working-directory: src-tauri
+        run: cargo tauri build --target aarch64-apple-darwin
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_ID_PASSWORD: ${{ secrets.APPLE_ID_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+
+      - name: Stage bundles
+        run: |
+          mkdir -p staging
+          find src-tauri/target/aarch64-apple-darwin/release/bundle \
+            \( -name "*.dmg" -o -name "*.app.tar.gz" \) \
+            -exec cp {} staging/ \;
+          ls -lh staging/
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: bundles-macos-aarch64
+          path: staging/
+          if-no-files-found: error
+
+  # ────────────────────────────────────────────────────────────────
+  # 2. Generate CHANGELOG and publish the GitHub Release
+  # ────────────────────────────────────────────────────────────────
+  release:
+    name: Publish GitHub Release
+    needs: [build-linux, build-macos-x64, build-macos-arm64]
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout (full history for changelog)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Determine version tag
+        id: tag
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "version=${{ github.event.inputs.tag }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "version=${GITHUB_REF_NAME}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Generate CHANGELOG since last release
+        id: changelog
+        run: |
+          TAG="${{ steps.tag.outputs.version }}"
+          # Find the previous tag (if any)
+          PREV_TAG=$(git tag --sort=-version:refname | grep -v "^${TAG}$" | head -1 || true)
+
+          echo "## What's Changed in ${TAG}" > CHANGELOG_RELEASE.md
+          echo "" >> CHANGELOG_RELEASE.md
+
+          if [ -n "$PREV_TAG" ]; then
+            echo "Full diff: [\`${PREV_TAG}...${TAG}\`](../../compare/${PREV_TAG}...${TAG})" >> CHANGELOG_RELEASE.md
+            echo "" >> CHANGELOG_RELEASE.md
+
+            # Categorise commits by conventional commit prefix
+            for prefix in feat fix perf refactor docs chore; do
+              commits=$(git log "${PREV_TAG}..HEAD" \
+                --pretty=format:"- %s ([%h](../../commit/%H))" \
+                --no-merges \
+                | grep -i "^- ${prefix}" || true)
+              if [ -n "$commits" ]; then
+                case $prefix in
+                  feat)     echo "### ✨ New Features" >> CHANGELOG_RELEASE.md ;;
+                  fix)      echo "### 🐛 Bug Fixes"   >> CHANGELOG_RELEASE.md ;;
+                  perf)     echo "### ⚡ Performance"  >> CHANGELOG_RELEASE.md ;;
+                  refactor) echo "### ♻️ Refactor"     >> CHANGELOG_RELEASE.md ;;
+                  docs)     echo "### 📚 Docs"         >> CHANGELOG_RELEASE.md ;;
+                  chore)    echo "### 🔧 Chores"       >> CHANGELOG_RELEASE.md ;;
+                esac
+                echo "$commits" >> CHANGELOG_RELEASE.md
+                echo "" >> CHANGELOG_RELEASE.md
+              fi
+            done
+
+            # Remainder (uncategorised)
+            OTHER=$(git log "${PREV_TAG}..HEAD" \
+              --pretty=format:"- %s ([%h](../../commit/%H))" \
+              --no-merges \
+              | grep -viE "^- (feat|fix|perf|refactor|docs|chore)" || true)
+            if [ -n "$OTHER" ]; then
+              echo "### 📦 Other" >> CHANGELOG_RELEASE.md
+              echo "$OTHER" >> CHANGELOG_RELEASE.md
+              echo "" >> CHANGELOG_RELEASE.md
+            fi
+          else
+            echo "_Initial release — no previous tag found._" >> CHANGELOG_RELEASE.md
+            echo "" >> CHANGELOG_RELEASE.md
+          fi
+
+          echo "### 📥 Installation" >> CHANGELOG_RELEASE.md
+          echo "" >> CHANGELOG_RELEASE.md
+          echo "| Platform | Package |" >> CHANGELOG_RELEASE.md
+          echo "|---|---|" >> CHANGELOG_RELEASE.md
+          echo "| Ubuntu / Debian | \`.deb\` |" >> CHANGELOG_RELEASE.md
+          echo "| Fedora / RHEL | \`.rpm\` |" >> CHANGELOG_RELEASE.md
+          echo "| Any Linux (portable) | \`.AppImage\` |" >> CHANGELOG_RELEASE.md
+          echo "| macOS (Intel) | \`.dmg\` (x86_64) |" >> CHANGELOG_RELEASE.md
+          echo "| macOS (Apple Silicon) | \`.dmg\` (aarch64) |" >> CHANGELOG_RELEASE.md
+          echo "" >> CHANGELOG_RELEASE.md
+          echo "> ⚠️ This is an unofficial Notion client. Not affiliated with or endorsed by Notion Labs, Inc." >> CHANGELOG_RELEASE.md
+
+          cat CHANGELOG_RELEASE.md
+
+      - name: Download all bundles
+        uses: actions/download-artifact@v4
+        with:
+          path: release-assets/
+          # Download all artifacts from this workflow run
+          merge-multiple: true
+
+      - name: List release assets
+        run: find release-assets/ -type f | sort
+
+      # Generate SHA-256 checksums for all assets
+      - name: Generate SHA-256 checksums
+        run: |
+          cd release-assets
+          sha256sum * > SHA256SUMS.txt
+          cat SHA256SUMS.txt
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.tag.outputs.version }}
+          name: "Lotion ${{ steps.tag.outputs.version }}"
+          body_path: CHANGELOG_RELEASE.md
+          draft: false
+          prerelease: ${{ contains(steps.tag.outputs.version, '-') }}
+          files: |
+            release-assets/*
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -10,6 +10,15 @@ pub struct Bounds {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TabState {
+    pub id: String,
+    pub title: String,
+    pub url: String,
+    pub is_active: bool,
+    pub is_pinned: bool,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct WindowState {
     pub id: String,
     pub bounds: Bounds,
@@ -17,8 +26,6 @@ pub struct WindowState {
     pub is_maximized: bool,
     pub is_minimized: bool,
     pub is_full_screen: bool,
-    pub title: String,
-    pub url: Option<String>,
     pub tab_ids: Vec<String>,
     pub active_tab_id: Option<String>,
 }
@@ -26,6 +33,7 @@ pub struct WindowState {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AppState {
     pub windows: HashMap<String, WindowState>,
+    pub tabs: HashMap<String, TabState>,
     pub focused_window_id: Option<String>,
 }
 
@@ -33,6 +41,7 @@ impl AppState {
     pub fn new() -> Self {
         Self {
             windows: HashMap::new(),
+            tabs: HashMap::new(),
             focused_window_id: None,
         }
     }

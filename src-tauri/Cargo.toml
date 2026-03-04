@@ -1,6 +1,6 @@
 [package]
 name = "lotion-rs"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2021"
 
 [dependencies]
@@ -9,15 +9,21 @@ log = "0.4"
 env_logger = "0.10"
 zstd = "0.13"
 byteorder = "1.5"
-tauri = { version = "2.0", features = ["macos-private-api"] }
-tauri-plugin-shell = "2.0"
+tauri = { version = "2.0", features = ["tray-icon", "unstable"] }
+tauri-plugin-shell = "2"
+tauri-plugin-updater = "2.0"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 uuid = { version = "1.7", features = ["v4"] }
-iced = { version = "0.12", features = ["full"] }
+iced = { version = "0.12", features = ["tokio"] }
 tokio = { version = "1.0", features = ["full"] }
 tokio-stream = "0.1"
 url = "2.5"
 opener = "0.7"
 toml = "0.8"
 dirs = "5.0"
+hunspell-rs = "0.3.0"
+fluent = "0.16"
+
+[build-dependencies]
+tauri-build = "2.0"

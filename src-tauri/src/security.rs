@@ -4,7 +4,7 @@ use crate::litebox::host::HostPlatform;
 use crate::traits::SecuritySandbox;
 
 pub struct SecurityModule {
-    litebox: Arc<LiteBox<HostPlatform>>,
+    pub litebox: Arc<LiteBox<HostPlatform>>,
 }
 
 impl SecurityModule {

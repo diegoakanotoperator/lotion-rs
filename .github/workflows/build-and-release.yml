@@ -1,109 +1,34 @@
-name: Build and Release
+# This file intentionally replaces the old combined build-and-release.yml.
+#
+# The pipeline is now split into purpose-specific workflows:
+#
+#   ci.yml      — Lint (check/clippy/fmt), tests, cargo-audit
+#                 Runs on: push to main/develop, pull_request
+#
+#   build.yml   — Multi-platform Tauri bundle builds
+#                 (Linux x86_64 .deb/.rpm/.AppImage, macOS x64 .dmg, macOS arm64 .dmg)
+#                 Runs on: push to main/develop, pull_request, and v* tags
+#
+#   release.yml — Full release pipeline triggered by v* tags or workflow_dispatch
+#                 Builds all platforms → generates CHANGELOG → SHA-256 checksums
+#                 → publishes GitHub Release with all bundles attached
+#
+# HOW TO RELEASE:
+#   git tag -a v0.3.0 -m "Release v0.3.0"
+#   git push origin v0.3.0
+#
+# Or manually from: Actions → Release → Run workflow → enter tag name
+name: _REPLACED
 
 on:
-  push:
-    branches: [ main, rust-version ]
-    tags: [ 'v*' ]
-  pull_request:
-    branches: [ main, rust-version ]
+  workflow_dispatch:
+    # No-op. Use release.yml instead.
 
 jobs:
-  build:
-    strategy:
-      matrix:
-        include:
-          - os: ubuntu-latest
-            target: x86_64-unknown-linux-gnu
-            platform: linux
-          - os: macos-latest
-            target: x86_64-apple-darwin
-            platform: macos-x64
-          - os: macos-latest
-            target: aarch64-apple-darwin
-            platform: macos-arm64
-
-    runs-on: ${{ matrix.os }}
-    
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-
-    - name: Install Linux system dependencies
-      if: matrix.os == 'ubuntu-latest'
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y libwebkit2gtk-4.1-dev build-essential curl wget file libxdo-dev libssl-dev libayatana-appindicator3-dev librsvg2-dev
-
-    - name: Setup Rust
-      uses: dtolnay/rust-toolchain@stable
-      with:
-        targets: ${{ matrix.target }}
-
-    - name: Cache cargo
-      uses: actions/cache@v4
-      with:
-        path: |
-          ~/.cargo/registry
-          ~/.cargo/git
-          src-tauri/target
-        key: ${{ runner.os }}-${{ matrix.target }}-cargo-${{ hashFiles('src-tauri/Cargo.lock') }}
-
-    - name: Install Tauri CLI
-      run: cargo install tauri-cli --version "^2.0"
-
-    - name: Build Tauri application
-      working-directory: src-tauri
-      run: cargo tauri build --target ${{ matrix.target }}
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-    - name: Upload artifacts
-      uses: actions/upload-artifact@v4
-      with:
-        name: lotion-${{ matrix.platform }}
-        path: |
-          src-tauri/target/${{ matrix.target }}/release/bundle/**/*
-        retention-days: 30
-
-  release:
-    needs: build
+  notice:
     runs-on: ubuntu-latest
-    if: startsWith(github.ref, 'refs/tags/v')
-    
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-
-    - name: Download all artifacts
-      uses: actions/download-artifact@v4
-      with:
-        path: artifacts/
-
-    - name: Display artifacts
-      run: find artifacts/ -type f | head -50
-
-    - name: Create Release
-      uses: softprops/action-gh-release@v2
-      with:
-        tag_name: ${{ github.ref_name }}
-        name: Lotion ${{ github.ref_name }}
-        body: |
-          ## Lotion ${{ github.ref_name }}
-
-          Native Rust desktop client for Notion.so — built with Tauri v2 + Iced.
-
-          ### Features
-          - Native Iced UI chrome (tab bar, navigation, window controls)
-          - Zero-Trust security enforcement
-          - LiteBox sandboxing
-          - Theme support (Dracula, Nord, custom CSS)
-          - Config persistence (TOML)
-
-          ### Installation
-          - **Linux**: Download `.deb` (Ubuntu/Debian), `.rpm` (Fedora/RHEL), or `.AppImage`
-          - **macOS**: Download the `.dmg` file
-        files: artifacts/**/*
-        draft: false
-        prerelease: false
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Notice
+        run: |
+          echo "This workflow is retired. See ci.yml, build.yml, and release.yml."
+          exit 0

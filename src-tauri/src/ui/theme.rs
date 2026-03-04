@@ -1,4 +1,4 @@
-use iced::{Color, styling::Theme};
+use iced::Color;
 
 pub const LIGHT_BG_PRIMARY: Color = Color::from_rgb(0xf5 as f32 / 255.0, 0xf5 as f32 / 255.0, 0xf5 as f32 / 255.0);
 pub const LIGHT_BG_TAB: Color = Color::from_rgb(0xe0 as f32 / 255.0, 0xe0 as f32 / 255.0, 0xe0 as f32 / 255.0);

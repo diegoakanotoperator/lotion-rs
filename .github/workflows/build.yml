@@ -1,0 +1,122 @@
+name: Build
+
+# Builds all platform packages. Runs on every push/PR so we catch
+# compilation regressions early, but artifact upload is cheap and
+# gives us downloadable bundles for manual QA.
+on:
+  push:
+    branches: [main, develop]
+    tags: ["v*"]
+  pull_request:
+    branches: [main, develop]
+
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CARGO_TERM_COLOR: always
+  RUST_BACKTRACE: 1
+
+jobs:
+  build:
+    name: Build — ${{ matrix.name }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # ── Linux ─────────────────────────────────────────────────
+          - name: Linux x86_64
+            os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+            platform: linux-x86_64
+            bundle_glob: |
+              src-tauri/target/x86_64-unknown-linux-gnu/release/bundle/deb/*.deb
+              src-tauri/target/x86_64-unknown-linux-gnu/release/bundle/rpm/*.rpm
+              src-tauri/target/x86_64-unknown-linux-gnu/release/bundle/appimage/*.AppImage
+
+          # ── macOS ─────────────────────────────────────────────────
+          - name: macOS x86_64 (Intel)
+            os: macos-latest
+            target: x86_64-apple-darwin
+            platform: macos-x86_64
+            bundle_glob: |
+              src-tauri/target/x86_64-apple-darwin/release/bundle/dmg/*.dmg
+
+          - name: macOS aarch64 (Apple Silicon)
+            os: macos-latest
+            target: aarch64-apple-darwin
+            platform: macos-aarch64
+            bundle_glob: |
+              src-tauri/target/aarch64-apple-darwin/release/bundle/dmg/*.dmg
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # ── Linux deps ──────────────────────────────────────────────
+      - name: Install Linux system dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libwebkit2gtk-4.1-dev \
+            build-essential curl wget file \
+            libxdo-dev libssl-dev \
+            libayatana-appindicator3-dev \
+            librsvg2-dev \
+            libhunspell-dev \
+            rpm
+
+      # ── Rust ────────────────────────────────────────────────────
+      - name: Setup Rust (stable)
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - name: Restore Cargo cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            src-tauri/target
+          key: build-${{ matrix.platform }}-${{ hashFiles('src-tauri/Cargo.lock') }}
+          restore-keys: build-${{ matrix.platform }}-
+
+      # ── Tauri CLI (cached via cargo-binstall for speed) ─────────
+      - name: Install cargo-binstall
+        uses: cargo-bins/cargo-binstall@main
+
+      - name: Install Tauri CLI
+        run: cargo binstall --no-confirm tauri-cli@^2
+
+      # ── Build ───────────────────────────────────────────────────
+      - name: Build Tauri bundles
+        working-directory: src-tauri
+        run: cargo tauri build --target ${{ matrix.target }}
+        env:
+          # Tauri updater signing key (set in repo secrets for real releases)
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+
+      # ── Collect bundles into a flat staging directory ───────────
+      - name: Collect bundles
+        shell: bash
+        run: |
+          mkdir -p staging
+          # Copy every bundle file (deb/rpm/AppImage/dmg) to staging/
+          find src-tauri/target/${{ matrix.target }}/release/bundle \
+            \( -name "*.deb" -o -name "*.rpm" -o -name "*.AppImage" -o -name "*.dmg" \) \
+            -exec cp {} staging/ \;
+          ls -lh staging/
+
+      - name: Upload bundle artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: lotion-${{ matrix.platform }}-${{ github.sha }}
+          path: staging/
+          retention-days: 14
+          if-no-files-found: error

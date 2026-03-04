@@ -1,6 +1,6 @@
 use tauri::{
     menu::{MenuBuilder, MenuItem, SubmenuBuilder},
-    AppHandle, Manager,
+    AppHandle,
 };
 
 pub fn create_main_menu(app: &AppHandle) -> tauri::Result<()> {
@@ -57,7 +57,7 @@ pub fn create_main_menu(app: &AppHandle) -> tauri::Result<()> {
 
     app.set_menu(menu)?;
     
-    app.on_menu_event(move |app, event| {
+    app.on_menu_event(move |_app, event| {
         match event.id().as_ref() {
             "nav_back" => { log::info!("Menu: Back"); }
             "nav_forward" => { log::info!("Menu: Forward"); }
@@ -65,9 +65,7 @@ pub fn create_main_menu(app: &AppHandle) -> tauri::Result<()> {
             "nav_home" => { log::info!("Menu: Home"); }
             "preferences" => { log::info!("Menu: Preferences"); }
             "toggle_dev_tools" => {
-                if let Some(window) = app.get_webview_window("main") {
-                    let _ = window.open_devtools();
-                }
+                log::info!("Menu: Toggle Developer Tools (disabled in release)");
             }
             _ => {}
         }
