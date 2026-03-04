@@ -10,6 +10,53 @@ use std::sync::Arc;
 use tauri::Manager;
 
 #[tauri::command]
+fn get_window_tabs(
+    window_id: String,
+    state: tauri::State<'_, Arc<tokio::sync::Mutex<AppState>>>,
+) -> Vec<lotion_rs::state::TabState> {
+    let app_state = state.blocking_lock();
+    if let Some(w_state) = app_state.windows.get(&window_id) {
+        w_state.tab_ids.iter()
+            .filter_map(|id| app_state.tabs.get(id))
+            .cloned()
+            .collect()
+    } else {
+        Vec::new()
+    }
+}
+
+#[tauri::command]
+fn switch_tab(
+    tab_id: String,
+    orchestrator: tauri::State<'_, Arc<dyn lotion_rs::traits::TabOrchestrator>>,
+) {
+    let _ = orchestrator.show_tab(&tab_id);
+}
+
+#[tauri::command]
+fn close_tab(
+    tab_id: String,
+    _app: tauri::AppHandle,
+    orchestrator: tauri::State<'_, Arc<dyn lotion_rs::traits::TabOrchestrator>>,
+    state: tauri::State<'_, Arc<tokio::sync::Mutex<AppState>>>,
+) {
+    let _ = orchestrator.destroy_tab(&tab_id);
+    
+    let mut app_state = state.blocking_lock();
+    app_state.tabs.remove(&tab_id);
+    for window_state in app_state.windows.values_mut() {
+        window_state.tab_ids.retain(|id| id != &tab_id);
+        if window_state.active_tab_id.as_ref() == Some(&tab_id) {
+            window_state.active_tab_id = window_state.tab_ids.last().cloned();
+            if let Some(ref next_id) = window_state.active_tab_id {
+                let _ = orchestrator.show_tab(next_id);
+            }
+        }
+    }
+    let _ = app_state.save_to_disk();
+}
+
+#[tauri::command]
 fn update_tab_state(
     tab_id: String,
     title: String,
@@ -86,6 +133,9 @@ fn main() {
             lotion_rs::spellcheck::check_spelling,
             lotion_rs::spellcheck::get_spelling_suggestions,
             update_tab_state,
+            get_window_tabs,
+            switch_tab,
+            close_tab,
             log_network_event
         ])
         .setup(move |app| {

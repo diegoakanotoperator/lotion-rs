@@ -173,7 +173,9 @@ impl TabController {
                         display: flex;
                         align-items: center;
                         padding-left: 12px;
-                        pointer-events: none; /* Let clicks pass through the drag region */
+                        pointer-events: none;
+                        background: inherit;
+                        border-bottom: 1px solid rgba(0,0,0,0.05);
                     `;
 
                     // Push the Notion sidebar down slightly so it doesn't overlap the buttons
@@ -181,15 +183,44 @@ impl TabController {
                     style.textContent = `
                         .notion-sidebar-container {{ margin-top: 38px !important; }}
                         .notion-topbar {{ padding-left: 80px !important; }}
+                        .lotion-tab {{
+                            padding: 4px 12px;
+                            font-size: 12px;
+                            border-radius: 6px 6px 0 0;
+                            cursor: pointer;
+                            display: flex;
+                            align-items: center;
+                            gap: 8px;
+                            max-width: 150px;
+                            overflow: hidden;
+                            white-space: nowrap;
+                            text-overflow: ellipsis;
+                            background: rgba(0,0,0,0.05);
+                            border: 1px solid rgba(0,0,0,0.1);
+                            border-bottom: none;
+                            pointer-events: auto;
+                        }}
+                        .lotion-tab.active {{
+                            background: white;
+                            font-weight: 500;
+                        }}
+                        .lotion-tab-close {{
+                            font-size: 14px;
+                            opacity: 0.5;
+                            transition: opacity 0.2s;
+                        }}
+                        .lotion-tab-close:hover {{
+                            opacity: 1;
+                        }}
                     `;
                     document.head.appendChild(style);
 
-                    // Create the Mac-style buttons container
                     const btnContainer = document.createElement('div');
                     btnContainer.style.cssText = `
                         display: flex;
                         gap: 8px;
-                        pointer-events: auto; /* Buttons must be clickable */
+                        align-items: center;
+                        pointer-events: auto;
                     `;
 
                     const createBtn = (color, clickHandler, label = "") => {{
@@ -204,7 +235,10 @@ impl TabController {
                             font-size: 8px; font-family: sans-serif;
                         `;
                         if (label) btn.innerText = label;
-                        btn.addEventListener('click', clickHandler);
+                        btn.addEventListener('click', (e) => {{
+                            e.stopPropagation();
+                            clickHandler();
+                        }});
                         return btn;
                     }};
 
@@ -220,46 +254,68 @@ impl TabController {
                         window.location.href = 'lotion-action://window:maximize';
                     }});
 
-                    const navBackBtn = createBtn('#e0e0e0', () => {{
-                        window.history.back();
-                    }}, '‹');
-                    
-                    const navForwardBtn = createBtn('#e0e0e0', () => {{
-                        window.history.forward();
-                    }}, '›');
-                    
-                    const refreshBtn = createBtn('#e0e0e0', () => {{
-                        window.location.reload();
-                    }}, '↻');
-
-                    const newTabBtn = createBtn('#27c93f', () => {{
-                        window.location.href = 'lotion-action://tab:new';
-                    }}, '+');
-
                     btnContainer.appendChild(closeBtn);
                     btnContainer.appendChild(minBtn);
                     btnContainer.appendChild(maxBtn);
-                    
-                    // Spacer
+
                     const spacer = document.createElement('div');
                     spacer.style.width = '24px';
                     btnContainer.appendChild(spacer);
-                    
-                    btnContainer.appendChild(navBackBtn);
-                    btnContainer.appendChild(navForwardBtn);
-                    btnContainer.appendChild(refreshBtn);
-                    
-                    // Another spacer
-                    const spacer2 = document.createElement('div');
-                    spacer2.style.width = '24px';
-                    btnContainer.appendChild(spacer2);
-                    
-                    btnContainer.appendChild(newTabBtn);
+
+                    const tabList = document.createElement('div');
+                    tabList.style.cssText = `
+                        display: flex;
+                        gap: 4px;
+                        align-items: flex-end;
+                        height: 100%;
+                        padding-top: 8px;
+                        pointer-events: auto;
+                    `;
+
+                    const renderTabs = async () => {{
+                        if (!window.__TAURI__) return;
+                        const tabs = await window.__TAURI__.invoke('get_window_tabs', {{ windowId: '{}' }});
+                        tabList.innerHTML = '';
+                        tabs.forEach(t => {{
+                            const tabEl = document.createElement('div');
+                            tabEl.className = 'lotion-tab' + (t.id === tabId ? ' active' : '');
+                            tabEl.innerText = t.title || 'Notion';
+                            
+                            const closeX = document.createElement('span');
+                            closeX.className = 'lotion-tab-close';
+                            closeX.innerText = ' ×';
+                            closeX.onclick = (e) => {{
+                                e.stopPropagation();
+                                window.__TAURI__.invoke('close_tab', {{ tabId: t.id }});
+                            }};
+                            
+                            tabEl.appendChild(closeX);
+                            tabEl.onclick = () => {{
+                                if (t.id !== tabId) {{
+                                    window.__TAURI__.invoke('switch_tab', {{ tabId: t.id }});
+                                }}
+                            }};
+                            tabList.appendChild(tabEl);
+                        }});
+                        
+                        const newTab = createBtn('#27c93f', () => {{
+                            window.location.href = 'lotion-action://tab:new';
+                        }}, '+');
+                        newTab.style.marginLeft = '8px';
+                        newTab.style.marginBottom = '6px';
+                        tabList.appendChild(newTab);
+                    }};
+
+                    btnContainer.appendChild(tabList);
                     titlebar.appendChild(btnContainer);
                     document.body.appendChild(titlebar);
+                    
+                    renderTabs();
+                    // Poll for tab changes (simple for now)
+                    setInterval(renderTabs, 5000);
                 }});
             }})();
-        "#, tab_id);
+        "#, tab_id, window_id);
         let _ = webview.eval(&title_observer_js);
 
         // Inject network monitor — intercepts fetch and XHR to log status/errors
