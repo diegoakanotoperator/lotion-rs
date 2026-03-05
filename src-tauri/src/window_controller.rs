@@ -13,7 +13,6 @@ impl WindowController {
             .title("Lotion (Notion Engine)")
             .inner_size(1200.0, 768.0)
             .decorations(false) // Custom injected Mac-like titlebar handles this now
-            .transparent(true)
             .build()?;
 
         // Ensure window state exists in AppState
