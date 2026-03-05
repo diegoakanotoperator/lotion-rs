@@ -1,6 +1,6 @@
-use serde::{Serialize, Deserialize};
-use std::path::PathBuf;
+use serde::{Deserialize, Serialize};
 use std::fs;
+use std::path::PathBuf;
 
 /// User-facing configuration persisted to disk as TOML.
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -55,23 +55,24 @@ impl LotionConfig {
         let path = Self::config_path();
         if path.exists() {
             match fs::read_to_string(&path) {
-                Ok(contents) => {
-                    match toml::from_str::<LotionConfig>(&contents) {
-                        Ok(config) => {
-                            log::info!("Config loaded from {}", path.display());
-                            return config;
-                        }
-                        Err(e) => {
-                            log::warn!("Failed to parse config, using defaults: {}", e);
-                        }
+                Ok(contents) => match toml::from_str::<LotionConfig>(&contents) {
+                    Ok(config) => {
+                        log::info!("Config loaded from {}", path.display());
+                        return config;
                     }
-                }
+                    Err(e) => {
+                        log::warn!("Failed to parse config, using defaults: {}", e);
+                    }
+                },
                 Err(e) => {
                     log::warn!("Failed to read config file, using defaults: {}", e);
                 }
             }
         } else {
-            log::info!("No config file found, creating default at {}", path.display());
+            log::info!(
+                "No config file found, creating default at {}",
+                path.display()
+            );
         }
 
         let config = Self::default();
@@ -83,10 +84,10 @@ impl LotionConfig {
     pub fn save(&self) -> Result<(), Box<dyn std::error::Error>> {
         let dir = Self::config_dir();
         fs::create_dir_all(&dir)?;
-        
+
         let contents = toml::to_string_pretty(self)?;
         fs::write(Self::config_path(), contents)?;
-        
+
         log::info!("Config saved to {}", Self::config_path().display());
         Ok(())
     }

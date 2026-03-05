@@ -1,5 +1,5 @@
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use serde::{Serialize, Deserialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Bounds {
@@ -77,15 +77,13 @@ impl AppState {
         let path = Self::state_path();
         if path.exists() {
             match std::fs::read_to_string(&path) {
-                Ok(contents) => {
-                    match serde_json::from_str::<AppState>(&contents) {
-                        Ok(state) => {
-                            log::info!("AppState loaded from {}", path.display());
-                            return Some(state);
-                        }
-                        Err(e) => log::warn!("Failed to parse state file: {}", e),
+                Ok(contents) => match serde_json::from_str::<AppState>(&contents) {
+                    Ok(state) => {
+                        log::info!("AppState loaded from {}", path.display());
+                        return Some(state);
                     }
-                }
+                    Err(e) => log::warn!("Failed to parse state file: {}", e),
+                },
                 Err(e) => log::warn!("Failed to read state file: {}", e),
             }
         }

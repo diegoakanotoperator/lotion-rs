@@ -1,9 +1,9 @@
+use crate::litebox::LiteBox;
+use crate::tab_controller::TabController;
+use crate::traits::TabOrchestrator;
 use std::collections::HashMap;
 use std::sync::{Arc, RwLock};
 use tauri::{AppHandle, Manager};
-use crate::tab_controller::TabController;
-use crate::litebox::LiteBox;
-use crate::traits::TabOrchestrator;
 
 impl TabOrchestrator for TabManager {
     fn create_tab(&self, app: &AppHandle, window_id: &str, url: &str) -> tauri::Result<String> {
@@ -15,7 +15,10 @@ impl TabOrchestrator for TabManager {
     }
 
     fn show_tab(&self, tab_id: &str) -> tauri::Result<()> {
-        let tabs = self.tabs.read().expect("TabManager: tabs read lock poisoned");
+        let tabs = self
+            .tabs
+            .read()
+            .expect("TabManager: tabs read lock poisoned");
         for (id, tab) in tabs.iter() {
             if id == tab_id {
                 tab.show()?;
@@ -27,11 +30,26 @@ impl TabOrchestrator for TabManager {
     }
 
     fn get_tab_ids(&self) -> Vec<String> {
-        self.tabs.read().expect("TabManager: tabs read lock poisoned").keys().cloned().collect()
+        self.tabs
+            .read()
+            .expect("TabManager: tabs read lock poisoned")
+            .keys()
+            .cloned()
+            .collect()
     }
 
-    fn inject_theme_into_tab(&self, app: &AppHandle, tab_id: &str, theme_name: &str) -> tauri::Result<()> {
-        if let Some(tab) = self.tabs.read().expect("TabManager: tabs read lock poisoned").get(tab_id) {
+    fn inject_theme_into_tab(
+        &self,
+        app: &AppHandle,
+        tab_id: &str,
+        theme_name: &str,
+    ) -> tauri::Result<()> {
+        if let Some(tab) = self
+            .tabs
+            .read()
+            .expect("TabManager: tabs read lock poisoned")
+            .get(tab_id)
+        {
             let theming = app.state::<Arc<dyn crate::traits::ThemingEngine>>();
             theming.inject_theme(&tab.webview, theme_name);
         }
@@ -52,34 +70,36 @@ impl TabManager {
         }
     }
 
-    pub fn create_tab(
-        &self,
-        app: &AppHandle,
-        window_id: &str,
-        url: &str,
-    ) -> tauri::Result<String> {
+    pub fn create_tab(&self, app: &AppHandle, window_id: &str, url: &str) -> tauri::Result<String> {
         let tab_id = uuid::Uuid::new_v4().to_string();
-        
-        let tab_controller = TabController::new(
-            app,
-            window_id,
-            tab_id.clone(),
-            url,
-            self.litebox.clone(),
-        )?;
 
-        self.tabs.write().expect("TabManager: tabs write lock poisoned").insert(tab_id.clone(), Arc::new(tab_controller));
+        let tab_controller =
+            TabController::new(app, window_id, tab_id.clone(), url, self.litebox.clone())?;
+
+        self.tabs
+            .write()
+            .expect("TabManager: tabs write lock poisoned")
+            .insert(tab_id.clone(), Arc::new(tab_controller));
 
         log::info!("TabManager: Created tab {}", tab_id);
         Ok(tab_id)
     }
 
     pub fn get_tab(&self, tab_id: &str) -> Option<String> {
-        self.tabs.read().expect("TabManager: tabs read lock poisoned").get(tab_id).map(|t| t.tab_id.clone())
+        self.tabs
+            .read()
+            .expect("TabManager: tabs read lock poisoned")
+            .get(tab_id)
+            .map(|t| t.tab_id.clone())
     }
 
     pub fn destroy_tab(&self, tab_id: &str) -> tauri::Result<()> {
-        if let Some(tab) = self.tabs.write().expect("TabManager: tabs write lock poisoned").remove(tab_id) {
+        if let Some(tab) = self
+            .tabs
+            .write()
+            .expect("TabManager: tabs write lock poisoned")
+            .remove(tab_id)
+        {
             tab.destroy()?;
         }
         Ok(())

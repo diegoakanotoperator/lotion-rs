@@ -12,7 +12,12 @@ pub trait TabOrchestrator: Send + Sync {
     fn destroy_tab(&self, tab_id: &str) -> tauri::Result<()>;
     fn show_tab(&self, tab_id: &str) -> tauri::Result<()>;
     fn get_tab_ids(&self) -> Vec<String>;
-    fn inject_theme_into_tab(&self, app: &AppHandle, tab_id: &str, theme_name: &str) -> tauri::Result<()>;
+    fn inject_theme_into_tab(
+        &self,
+        app: &AppHandle,
+        tab_id: &str,
+        theme_name: &str,
+    ) -> tauri::Result<()>;
 }
 
 /// Interface for window management

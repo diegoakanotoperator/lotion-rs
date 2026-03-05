@@ -6,7 +6,7 @@ use std::fs;
 
 pub fn apply_linux_sandbox() -> Result<(), String> {
     log::info!("Applying Linux filesystem/capability restrictions");
-    
+
     #[cfg(target_os = "linux")]
     unsafe {
         // 1. Disable core dumps and ptrace attachments (unless root)
@@ -23,7 +23,7 @@ pub fn apply_linux_sandbox() -> Result<(), String> {
             log::info!("LiteBox: PR_SET_NO_NEW_PRIVS enforced.");
         }
     }
-    
+
     Ok(())
 }
 

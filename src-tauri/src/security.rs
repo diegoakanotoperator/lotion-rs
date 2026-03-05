@@ -1,5 +1,5 @@
-use std::sync::Arc;
 use crate::litebox::LiteBox;
+use std::sync::Arc;
 
 pub struct SecurityModule {
     pub litebox: Arc<LiteBox>,

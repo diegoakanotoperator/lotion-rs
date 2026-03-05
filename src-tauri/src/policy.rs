@@ -43,21 +43,22 @@ impl PolicyEnforcer for PolicyManager {
                 }
 
                 // Allow Google and Apple login navigation during OAuth flow
-                if (host == "accounts.google.com" || host.ends_with(".accounts.google.com")) || 
-                   (host == "appleid.apple.com" || host.ends_with(".appleid.apple.com")) {
+                if (host == "accounts.google.com" || host.ends_with(".accounts.google.com"))
+                    || (host == "appleid.apple.com" || host.ends_with(".appleid.apple.com"))
+                {
                     log::debug!("PolicyManager: ALLOWED OAuth provider: {}", host);
                     return true;
                 }
 
-                log::warn!(
-                    "PolicyManager: BLOCKED unauthorized endpoint: {}",
-                    host
-                );
+                log::warn!("PolicyManager: BLOCKED unauthorized endpoint: {}", host);
                 return false;
             }
         }
 
-        log::warn!("PolicyManager: BLOCKED malformed or unsupported URL: {}", url);
+        log::warn!(
+            "PolicyManager: BLOCKED malformed or unsupported URL: {}",
+            url
+        );
         // Block other protocols/malformed URLs by default (Zero-Trust)
         false
     }
@@ -104,20 +105,21 @@ impl PolicyEnforcer for PolicyManager {
         if let Ok(parsed_url) = url::Url::parse(url) {
             if let Some(host) = parsed_url.host_str() {
                 // If it's an official Notion domain or OAuth provider, keep it in the app
-                if self.is_official_notion(host) || 
-                   (host == "accounts.google.com" || host.ends_with(".accounts.google.com")) || 
-                   (host == "appleid.apple.com" || host.ends_with(".appleid.apple.com")) ||
-                   (host == "apple.com" || host.ends_with(".apple.com")) {
+                if self.is_official_notion(host)
+                    || (host == "accounts.google.com" || host.ends_with(".accounts.google.com"))
+                    || (host == "appleid.apple.com" || host.ends_with(".appleid.apple.com"))
+                    || (host == "apple.com" || host.ends_with(".apple.com"))
+                {
                     return false;
                 }
             }
-            
+
             // Local tauri schemes stay in-app
             if parsed_url.scheme() == "tauri" {
                 return false;
             }
         }
-        
+
         // Everything else is an external link and should open in system browser
         true
     }
@@ -132,16 +134,17 @@ mod tests {
     fn test_should_route_popup_to_system_browser() {
         let policy = PolicyManager::new();
         // OAuth providers should NOT be routed (they stay in app to capture session)
-        assert!(!policy.should_route_popup_to_system_browser("https://accounts.google.com/o/oauth2/v2/auth"));
+        assert!(!policy
+            .should_route_popup_to_system_browser("https://accounts.google.com/o/oauth2/v2/auth"));
         assert!(!policy.should_route_popup_to_system_browser("https://appleid.apple.com/auth"));
-        
+
         // External links should be routed
         assert!(policy.should_route_popup_to_system_browser("https://github.com/login"));
-        
+
         // Notion internal popups should NOT be routed
         assert!(!policy.should_route_popup_to_system_browser("https://www.notion.so/some-popup"));
         assert!(!policy.should_route_popup_to_system_browser("https://www.notion.com/some-popup"));
-        
+
         // Local tauri schemes should NOT be routed
         assert!(!policy.should_route_popup_to_system_browser("tauri://localhost/index.html"));
     }
@@ -159,13 +162,13 @@ mod tests {
     fn test_block_unauthorized_urls() {
         let policy = PolicyManager::new();
         assert!(!policy.validate_url("https://google.com"));
-        
+
         // Exact substring attack tests - should be blocked
         assert!(!policy.validate_url("https://evilnotion.so"));
         assert!(!policy.validate_url("https://hacker.evilnotion.so"));
         assert!(!policy.validate_url("https://accounts.google.com.evil.com"));
         assert!(!policy.validate_url("https://malicious-site.com/notion.so"));
-        
+
         assert!(!policy.validate_url("http://localhost:3000"));
     }
 
@@ -178,7 +181,9 @@ mod tests {
     #[test]
     fn test_validate_external_links() {
         let policy = PolicyManager::new();
-        assert!(policy.validate_external_link("https://github.com/diegoakanottheoperator/lotion-rs"));
+        assert!(
+            policy.validate_external_link("https://github.com/diegoakanottheoperator/lotion-rs")
+        );
         assert!(policy.validate_external_link("mailto:support@notion.so"));
         assert!(!policy.validate_external_link("http://unsecure-link.com"));
         assert!(!policy.validate_external_link("javascript:alert('XSS')"));

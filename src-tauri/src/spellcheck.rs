@@ -29,32 +29,43 @@ impl SpellcheckManager {
         if std::path::Path::new(aff).exists() && std::path::Path::new(dic).exists() {
             manager.load_dictionaries(aff, dic);
         } else {
-            log::warn!("SpellcheckManager: Default en_US dictionaries not found in /usr/share/hunspell/");
+            log::warn!(
+                "SpellcheckManager: Default en_US dictionaries not found in /usr/share/hunspell/"
+            );
         }
 
         manager
     }
-    
+
     pub fn load_dictionaries(&self, aff_path: &str, dic_path: &str) {
         let hs = Hunspell::new(aff_path, dic_path);
-        *self.hunspell.lock().expect("SpellcheckManager: hunspell lock poisoned") = Some(SafeHunspell(hs));
+        *self
+            .hunspell
+            .lock()
+            .expect("SpellcheckManager: hunspell lock poisoned") = Some(SafeHunspell(hs));
         log::info!("Hunspell dictionaries loaded successfully.");
     }
 }
 
 #[tauri::command]
 pub fn check_spelling(word: String, state: State<'_, SpellcheckManager>) -> bool {
-    let hs_lock = state.hunspell.lock().expect("SpellcheckManager: hunspell lock poisoned");
+    let hs_lock = state
+        .hunspell
+        .lock()
+        .expect("SpellcheckManager: hunspell lock poisoned");
     if let Some(hs) = hs_lock.as_ref() {
         hs.0.check(&word)
     } else {
-        true 
+        true
     }
 }
 
 #[tauri::command]
 pub fn get_spelling_suggestions(word: String, state: State<'_, SpellcheckManager>) -> Vec<String> {
-    let hs_lock = state.hunspell.lock().expect("SpellcheckManager: hunspell lock poisoned");
+    let hs_lock = state
+        .hunspell
+        .lock()
+        .expect("SpellcheckManager: hunspell lock poisoned");
     if let Some(hs) = hs_lock.as_ref() {
         hs.0.suggest(&word)
     } else {

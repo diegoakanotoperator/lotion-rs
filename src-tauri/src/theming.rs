@@ -43,7 +43,8 @@ impl ThemeManager {
                     --theme--divider: #6272a4;
                 }
                 .notion-sidebar, .notion-topbar { background: #21222c !important; }
-            "#.to_string(),
+            "#
+            .to_string(),
             "nord" => r#"
                 :root.dark {
                     --theme--bg: #2e3440;
@@ -55,7 +56,8 @@ impl ThemeManager {
                     --theme--interactive_hover: #88c0d0;
                     --theme--divider: #4c566a;
                 }
-            "#.to_string(),
+            "#
+            .to_string(),
             "default" | "light" => "".to_string(),
             _ => "".to_string(),
         }
@@ -77,7 +79,10 @@ impl ThemingEngine for ThemeManager {
     }
 
     fn get_custom_css(&self) -> String {
-        let path_guard = self.custom_css_path.read().expect("ThemeManager: custom_css_path read lock poisoned");
+        let path_guard = self
+            .custom_css_path
+            .read()
+            .expect("ThemeManager: custom_css_path read lock poisoned");
         if let Some(path) = path_guard.as_ref() {
             if path.exists() {
                 match std::fs::read_to_string(path) {
@@ -110,12 +115,18 @@ impl ThemingEngine for ThemeManager {
     }
 
     fn set_active_theme(&self, name: &str) {
-        let mut theme = self.active_theme.write().expect("ThemeManager: active_theme write lock poisoned");
+        let mut theme = self
+            .active_theme
+            .write()
+            .expect("ThemeManager: active_theme write lock poisoned");
         *theme = name.to_string();
         log::info!("Active theme changed to: {}", name);
     }
 
     fn get_active_theme(&self) -> String {
-        self.active_theme.read().expect("ThemeManager: active_theme read lock poisoned").clone()
+        self.active_theme
+            .read()
+            .expect("ThemeManager: active_theme read lock poisoned")
+            .clone()
     }
 }
