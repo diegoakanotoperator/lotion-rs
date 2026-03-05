@@ -98,7 +98,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Install macOS system dependencies
-        run: brew install hunspell
+        run: brew install hunspell llvm
 
       - uses: dtolnay/rust-toolchain@stable
         with:
@@ -120,7 +120,9 @@ jobs:
         working-directory: src-tauri
         run: |
           export SDKROOT=$(xcrun --show-sdk-path)
-          export LIBCLANG_PATH="$(xcrun --find clang | xargs dirname)/../lib"
+          export LLVM_PATH=$(brew --prefix llvm)
+          export LIBCLANG_PATH="$LLVM_PATH/lib"
+          export DYLD_LIBRARY_PATH="$LLVM_PATH/lib:$DYLD_LIBRARY_PATH"
           cargo tauri build --target x86_64-apple-darwin
         env:
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
@@ -153,7 +155,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Install macOS system dependencies
-        run: brew install hunspell
+        run: brew install hunspell llvm
 
       - uses: dtolnay/rust-toolchain@stable
         with:
@@ -175,7 +177,9 @@ jobs:
         working-directory: src-tauri
         run: |
           export SDKROOT=$(xcrun --show-sdk-path)
-          export LIBCLANG_PATH="$(xcrun --find clang | xargs dirname)/../lib"
+          export LLVM_PATH=$(brew --prefix llvm)
+          export LIBCLANG_PATH="$LLVM_PATH/lib"
+          export DYLD_LIBRARY_PATH="$LLVM_PATH/lib:$DYLD_LIBRARY_PATH"
           cargo tauri build --target aarch64-apple-darwin
         env:
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
