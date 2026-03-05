@@ -6,6 +6,17 @@
   <strong>A native Rust desktop client for Notion.so — built for Linux, engineered for adversarial environments.</strong>
 </p>
 
+### ☕ Donations
+
+If this project saves you time or you just want to support its continued development, donations are welcome and very much appreciated.
+
+**Ethereum (ETH / ERC-20):**
+```
+0xe7254b9a20a95658167a84120a84dce9326ef3ac
+```
+
+---
+
 <p align="center">
   <a href="https://github.com/puneetsl/lotion">Based on Lotion by Puneet Singh Ludu</a> &nbsp;·&nbsp;
   <a href="https://github.com/SecByDesignCollective/Manifesto">Security Philosophy: SecByDesign Manifesto</a>
