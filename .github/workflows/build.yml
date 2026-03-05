@@ -59,7 +59,7 @@ jobs:
       # ── macOS deps ──────────────────────────────────────────────
       - name: Install macOS system dependencies
         if: runner.os == 'macOS'
-        run: brew install hunspell
+        run: brew install hunspell llvm
 
       # ── Linux deps ──────────────────────────────────────────────
       - name: Install Linux system dependencies
@@ -105,7 +105,9 @@ jobs:
         run: |
           if [ "${{ runner.os }}" == "macOS" ]; then
             export SDKROOT=$(xcrun --show-sdk-path)
-            export LIBCLANG_PATH="$(xcrun --find clang | xargs dirname)/../lib"
+            export LLVM_PATH=$(brew --prefix llvm)
+            export LIBCLANG_PATH="$LLVM_PATH/lib"
+            export DYLD_LIBRARY_PATH="$LLVM_PATH/lib:$DYLD_LIBRARY_PATH"
           fi
           cargo tauri build --target ${{ matrix.target }}
         env:
