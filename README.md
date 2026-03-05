@@ -1,5 +1,5 @@
 <p align="center">
-  <img width="35%" height="35%" src="./docs/images/Banner.png" alt="Lotion — Native Rust Desktop App for Notion.so">
+  <img width="60%" height="60%" src="./docs/images/Banner.png" alt="Lotion — Native Rust Desktop App for Notion.so">
 </p>
 
 <p align="center">
