@@ -115,7 +115,9 @@ jobs:
 
       - name: Build bundles
         working-directory: src-tauri
-        run: cargo tauri build --target x86_64-apple-darwin
+        run: |
+          export SDKROOT=$(xcrun --show-sdk-path)
+          cargo tauri build --target x86_64-apple-darwin
         env:
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
@@ -164,7 +166,9 @@ jobs:
 
       - name: Build bundles
         working-directory: src-tauri
-        run: cargo tauri build --target aarch64-apple-darwin
+        run: |
+          export SDKROOT=$(xcrun --show-sdk-path)
+          cargo tauri build --target aarch64-apple-darwin
         env:
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}

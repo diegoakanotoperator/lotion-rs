@@ -97,7 +97,11 @@ jobs:
       # ── Build ───────────────────────────────────────────────────
       - name: Build Tauri bundles
         working-directory: src-tauri
-        run: cargo tauri build --target ${{ matrix.target }}
+        run: |
+          if [ "${{ runner.os }}" == "macOS" ]; then
+            export SDKROOT=$(xcrun --show-sdk-path)
+          fi
+          cargo tauri build --target ${{ matrix.target }}
         env:
           # Tauri updater signing key (set in repo secrets for real releases)
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
