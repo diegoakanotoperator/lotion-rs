@@ -3,7 +3,6 @@ mod stress_tests {
     use crate::policy::PolicyManager;
     use crate::traits::PolicyEnforcer;
     use crate::state::AppState;
-    use std::collections::HashMap;
 
     #[test]
     fn stress_test_policy_manager() {

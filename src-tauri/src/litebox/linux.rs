@@ -6,13 +6,23 @@ use std::fs;
 
 pub fn apply_linux_sandbox() -> Result<(), String> {
     log::info!("Applying Linux filesystem/capability restrictions");
-    // In a fully developed implementation, we would call prctl(PR_SET_SECCOMP) here
-    // or unshare() to drop namespaces. For the scope of this refactor, we provide 
-    // the functional skeleton enforcing the defensive boundary requirements.
     
-    // Example: Dropping all unnecessary capabilities (if running with any)
-    // capng_clear(CAPNG_SELECT_BOTH);
-    // capng_apply(CAPNG_SELECT_BOTH);
+    #[cfg(target_os = "linux")]
+    unsafe {
+        // 1. Disable core dumps and ptrace attachments (unless root)
+        if libc::prctl(libc::PR_SET_DUMPABLE, 0, 0, 0, 0) != 0 {
+            log::warn!("LiteBox: Failed to disable dumpable flag (PR_SET_DUMPABLE)");
+        } else {
+            log::info!("LiteBox: Process dumpable flag disabled (anti-ptrace/core).");
+        }
+
+        // 2. Prevent the process or its children from gaining new privileges via setuid/setgid
+        if libc::prctl(libc::PR_SET_NO_NEW_PRIVS, 1, 0, 0, 0) != 0 {
+            log::warn!("LiteBox: Failed to set PR_SET_NO_NEW_PRIVS");
+        } else {
+            log::info!("LiteBox: PR_SET_NO_NEW_PRIVS enforced.");
+        }
+    }
     
     Ok(())
 }
