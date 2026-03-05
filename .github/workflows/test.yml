@@ -42,11 +42,11 @@ jobs:
 
     - name: Check compilation
       working-directory: src-tauri
-      run: cargo check
+      run: cargo check --release
 
     - name: Run clippy
       working-directory: src-tauri
-      run: cargo clippy -- -D warnings || echo "Clippy completed with warnings"
+      run: cargo clippy --release -- -D warnings || echo "Clippy completed with warnings"
 
     - name: Check formatting
       working-directory: src-tauri
@@ -54,7 +54,7 @@ jobs:
 
     - name: Run tests
       working-directory: src-tauri
-      run: cargo test
+      run: cargo test --release
 
   security:
     runs-on: ubuntu-latest
