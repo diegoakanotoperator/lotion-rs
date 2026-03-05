@@ -100,6 +100,12 @@ jobs:
       - name: Install macOS system dependencies
         run: brew install hunspell llvm
 
+      - name: Fix libclang symlink (macOS)
+        run: |
+          LLVM_LIB_DIR="$(brew --prefix llvm)/lib"
+          sudo mkdir -p /usr/local/lib
+          sudo ln -sf "$LLVM_LIB_DIR/libclang.dylib" /usr/local/lib/libclang.dylib
+
       - uses: dtolnay/rust-toolchain@stable
         with:
           targets: x86_64-apple-darwin
@@ -156,6 +162,12 @@ jobs:
 
       - name: Install macOS system dependencies
         run: brew install hunspell llvm
+
+      - name: Fix libclang symlink (macOS)
+        run: |
+          LLVM_LIB_DIR="$(brew --prefix llvm)/lib"
+          sudo mkdir -p /usr/local/lib
+          sudo ln -sf "$LLVM_LIB_DIR/libclang.dylib" /usr/local/lib/libclang.dylib
 
       - uses: dtolnay/rust-toolchain@stable
         with:
