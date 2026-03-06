@@ -249,23 +249,23 @@ impl TabController {
                         return btn;
                     }};
 
-                    const closeBtn = createBtn('#ff5f56', () => {
-                        if (window.__TAURI__) {
-                            window.__TAURI__.invoke('close_window', { windowId: '${window_id}' });
-                        }
-                    });
+                    const closeBtn = createBtn('#ff5f56', () => {{
+                        if (window.__TAURI__) {{
+                            window.__TAURI__.invoke('close_window', {{ windowId: '${window_id}' }});
+                        }}
+                    }});
 
-                    const minBtn = createBtn('#ffbd2e', () => {
-                        if (window.__TAURI__) {
-                            window.__TAURI__.invoke('minimize_window', { windowId: '${window_id}' });
-                        }
-                    });
+                    const minBtn = createBtn('#ffbd2e', () => {{
+                        if (window.__TAURI__) {{
+                            window.__TAURI__.invoke('minimize_window', {{ windowId: '${window_id}' }});
+                        }}
+                    }});
 
-                    const maxBtn = createBtn('#27c93f', () => {
-                        if (window.__TAURI__) {
-                            window.__TAURI__.invoke('maximize_window', { windowId: '${window_id}' });
-                        }
-                    });
+                    const maxBtn = createBtn('#27c93f', () => {{
+                        if (window.__TAURI__) {{
+                            window.__TAURI__.invoke('maximize_window', {{ windowId: '${window_id}' }});
+                        }}
+                    }});
 
 
                     btnContainer.appendChild(closeBtn);
