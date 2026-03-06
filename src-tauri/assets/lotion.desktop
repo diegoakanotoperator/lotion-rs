@@ -1,5 +1,5 @@
 [Desktop Entry]
-Name=Lotion
+Name=lotion-rs
 Comment=Unofficial Notion.so Desktop app for Linux
 Exec=lotion-rs %U
 Icon=lotion

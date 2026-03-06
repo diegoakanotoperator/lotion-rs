@@ -42,11 +42,15 @@ jobs:
 
     - name: Check compilation
       working-directory: src-tauri
-      run: cargo check --release
+      run: |
+        export LIBCLANG_PATH=$(llvm-config --libdir)
+        cargo check --release
 
     - name: Run clippy
       working-directory: src-tauri
-      run: cargo clippy --release -- -D warnings || echo "Clippy completed with warnings"
+      run: |
+        export LIBCLANG_PATH=$(llvm-config --libdir)
+        cargo clippy --release -- -D warnings || echo "Clippy completed with warnings"
 
     - name: Check formatting
       working-directory: src-tauri
@@ -54,7 +58,9 @@ jobs:
 
     - name: Run tests
       working-directory: src-tauri
-      run: cargo test --release
+      run: |
+        export LIBCLANG_PATH=$(llvm-config --libdir)
+        cargo test --release
 
   security:
     runs-on: ubuntu-latest

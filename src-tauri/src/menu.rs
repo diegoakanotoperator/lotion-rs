@@ -7,10 +7,11 @@ use tauri::{
 pub fn create_main_menu(app: &AppHandle) -> tauri::Result<()> {
     let pkg_info = app.package_info();
 
-    // Lotion Menu
-    let lotion_menu = SubmenuBuilder::new(app, "Lotion")
-        .about(Some(tauri::menu::AboutMetadata {
-            name: Some("Lotion".to_string()),
+    // lotion-rs Menu
+    let lotion_menu = SubmenuBuilder::new(app, "lotion-rs")
+        .about(Some(AboutMetadata {
+            name: Some("lotion-rs".to_string()),
+
             version: Some(pkg_info.version.to_string()),
             ..Default::default()
         }))

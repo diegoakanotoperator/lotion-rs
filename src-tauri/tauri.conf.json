@@ -1,6 +1,6 @@
 {
     "productName": "lotion-rs",
-    "version": "0.2.0",
+    "version": "0.2.1",
     "identifier": "com.lotion.rs",
     "build": {
         "frontendDist": "assets"
@@ -33,7 +33,7 @@
         ],
         "category": "Productivity",
         "shortDescription": "Native Rust client for Notion.so",
-        "longDescription": "Lotion is a native Rust desktop client for Notion.so, built with Tauri v2. Features Zero-Trust security, LiteBox sandboxing, and custom theming.",
+        "longDescription": "lotion-rs is a native Rust desktop client for Notion.so, built with Tauri v2. Features Zero-Trust security, LiteBox sandboxing, and custom theming.",
         "resources": [
             "assets/*",
             "i18n/**/*"
