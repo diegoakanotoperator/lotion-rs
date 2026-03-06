@@ -96,6 +96,31 @@ fn update_tab_state(
 }
 
 #[tauri::command]
+fn minimize_window(window_id: String, app: tauri::AppHandle) {
+    if let Some(window) = app.get_window(&window_id) {
+        let _ = window.minimize();
+    }
+}
+
+#[tauri::command]
+fn maximize_window(window_id: String, app: tauri::AppHandle) {
+    if let Some(window) = app.get_window(&window_id) {
+        if let Ok(true) = window.is_maximized() {
+            let _ = window.unmaximize();
+        } else {
+            let _ = window.maximize();
+        }
+    }
+}
+
+#[tauri::command]
+fn close_window(window_id: String, app: tauri::AppHandle) {
+    if let Some(window) = app.get_window(&window_id) {
+        let _ = window.close();
+    }
+}
+
+#[tauri::command]
 fn log_network_event(event: String) {
     log::info!("[lotion-net] {}", event);
 }
@@ -158,6 +183,9 @@ fn main() {
             get_window_tabs,
             switch_tab,
             close_tab,
+            minimize_window,
+            maximize_window,
+            close_window,
             log_network_event
         ])
         .setup(move |app| {
