@@ -1,6 +1,6 @@
 use std::sync::Arc;
 use tauri::{
-    menu::{MenuBuilder, MenuItem, SubmenuBuilder},
+    menu::{AboutMetadata, MenuBuilder, MenuItem, SubmenuBuilder},
     AppHandle, Manager,
 };
 

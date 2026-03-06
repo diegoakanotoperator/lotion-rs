@@ -73,6 +73,8 @@ jobs:
         working-directory: src-tauri
         run: |
           export LIBCLANG_PATH=$(llvm-config --libdir)
+          export LD_LIBRARY_PATH=$(llvm-config --libdir):$LD_LIBRARY_PATH
+          echo "LIBCLANG_PATH: $LIBCLANG_PATH"
           cargo tauri build --target x86_64-unknown-linux-gnu
         env:
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
@@ -101,6 +103,15 @@ jobs:
 
       - name: Install macOS system dependencies
         run: brew install hunspell llvm
+
+      - name: Locate libclang (macOS)
+        run: |
+          LLVM_LIB_DIR="$(brew --prefix llvm)/lib"
+          echo "LLVM_LIB_DIR: $LLVM_LIB_DIR"
+          ls -l "$LLVM_LIB_DIR/libclang.dylib"
+          # Symlink to /usr/local/lib which is usually searched by dyld
+          sudo mkdir -p /usr/local/lib
+          sudo ln -sf "$LLVM_LIB_DIR/libclang.dylib" /usr/local/lib/libclang.dylib
 
       - uses: dtolnay/rust-toolchain@stable
         with:
@@ -159,6 +170,15 @@ jobs:
 
       - name: Install macOS system dependencies
         run: brew install hunspell llvm
+
+      - name: Locate libclang (macOS)
+        run: |
+          LLVM_LIB_DIR="$(brew --prefix llvm)/lib"
+          echo "LLVM_LIB_DIR: $LLVM_LIB_DIR"
+          ls -l "$LLVM_LIB_DIR/libclang.dylib"
+          # Symlink to /usr/local/lib which is usually searched by dyld
+          sudo mkdir -p /usr/local/lib
+          sudo ln -sf "$LLVM_LIB_DIR/libclang.dylib" /usr/local/lib/libclang.dylib
 
       - uses: dtolnay/rust-toolchain@stable
         with:
