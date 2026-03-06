@@ -118,13 +118,18 @@ jobs:
       - uses: cargo-bins/cargo-binstall@main
       - run: cargo binstall --no-confirm tauri-cli@^2
 
+      - name: Discover LLVM path
+        id: llvm
+        run: echo "lib_dir=$(brew --prefix llvm)/lib" >> "$GITHUB_OUTPUT"
+
       - name: Build bundles
         working-directory: src-tauri
         run: |
           export SDKROOT=$(xcrun --show-sdk-path)
-          export LIBCLANG_PATH="$(brew --prefix llvm)/lib"
           cargo tauri build --target x86_64-apple-darwin
         env:
+          LIBCLANG_PATH: ${{ steps.llvm.outputs.lib_dir }}
+          DYLD_LIBRARY_PATH: ${{ steps.llvm.outputs.lib_dir }}
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
           APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
@@ -132,7 +137,6 @@ jobs:
           APPLE_ID: ${{ secrets.APPLE_ID }}
           APPLE_ID_PASSWORD: ${{ secrets.APPLE_ID_PASSWORD }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
-          DYLD_LIBRARY_PATH: $(brew --prefix llvm)/lib
 
       - name: Stage bundles
         run: |
@@ -174,13 +178,18 @@ jobs:
       - uses: cargo-bins/cargo-binstall@main
       - run: cargo binstall --no-confirm tauri-cli@^2
 
+      - name: Discover LLVM path
+        id: llvm
+        run: echo "lib_dir=$(brew --prefix llvm)/lib" >> "$GITHUB_OUTPUT"
+
       - name: Build bundles
         working-directory: src-tauri
         run: |
           export SDKROOT=$(xcrun --show-sdk-path)
-          export LIBCLANG_PATH="$(brew --prefix llvm)/lib"
           cargo tauri build --target aarch64-apple-darwin
         env:
+          LIBCLANG_PATH: ${{ steps.llvm.outputs.lib_dir }}
+          DYLD_LIBRARY_PATH: ${{ steps.llvm.outputs.lib_dir }}
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
           APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
@@ -188,7 +197,6 @@ jobs:
           APPLE_ID: ${{ secrets.APPLE_ID }}
           APPLE_ID_PASSWORD: ${{ secrets.APPLE_ID_PASSWORD }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
-          DYLD_LIBRARY_PATH: $(brew --prefix llvm)/lib
 
       - name: Stage bundles
         run: |
