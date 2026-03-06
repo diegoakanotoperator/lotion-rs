@@ -53,7 +53,7 @@ Lotion-rs keeps everything that made Lotion great and rebuilds the foundation in
 | **UI** | Chromium renderer | System WebView + Injected native UI chrome |
 | **Memory** | ~200–400 MB | ~60–100 MB |
 | **Security** | Standard Electron sandbox | Zero-Trust + LiteBox sandboxing |
-| **Config** | JSON | TOML (`~/.config/lotion/config.toml`) |
+| **Config** | JSON | TOML (`~/.config/lotion-rs/config.toml`) |
 | **Packages** | `.deb`, `.rpm`, `.zip` | `.deb`, `.rpm`, `.AppImage` |
 
 ---
@@ -68,7 +68,7 @@ What that means in practice for Lotion-rs:
 
 - **Zero-Trust by Default** — No network segment is trusted. The application enforces strict Content Security Policies and allows only verified Notion domains.
 - **LiteBox Sandboxing** — The Notion WebView runs in an isolated sandbox. Navigation to arbitrary URLs is blocked at the policy layer before a request is even made.
-- **Least Privilege** — The application requests only the OS permissions it requires. No access to your filesystem beyond `~/.config/lotion/`.
+- **Least Privilege** — The application requests only the OS permissions it requires. No access to your filesystem beyond `~/.config/lotion-rs/`.
 - **Anti-Telemetry** — No usage data, analytics, or crash reports are sent anywhere. What happens on your machine stays on your machine.
 - **Fail-Safe Defaults** — If configuration is missing or malformed, the application falls back to safe, hardened defaults rather than failing open.
 - **Radical Transparency** — The source code is fully open for audit. Every security claim can be verified by reading the code.
@@ -89,9 +89,9 @@ What that means in practice for Lotion-rs:
 - **No Remote Telemetry** — Zero data exfiltration. No analytics, no crash reporting pipeline, no "phone home".
 
 ### Customisation
-- **Theme Engine** — Ships with built-in themes (Dracula, Nord, and more). Theme is persisted to `~/.config/lotion/config.toml`.
+- **Theme Engine** — Ships with built-in themes (Dracula, Nord, and more). Theme is persisted to `~/.config/lotion-rs/config.toml`.
 - **Custom CSS Injection** — Point `custom_css_path` in your config at any `.css` file to inject custom styles into the Notion interface at runtime.
-- **TOML Configuration** — Human-readable config file at `~/.config/lotion/config.toml` with hot-reloadable settings.
+- **TOML Configuration** — Human-readable config file at `~/.config/lotion-rs/config.toml` with hot-reloadable settings.
 
 ### Platform
 - **Linux-First** — Primary development and testing target. Packages: `.deb`, `.rpm`, `.AppImage`.
@@ -183,14 +183,14 @@ cargo tauri dev
 
 ## Configuration
 
-Lotion-rs stores its configuration at `~/.config/lotion/config.toml`. The file is created automatically on first run with sensible defaults.
+Lotion-rs stores its configuration at `~/.config/lotion-rs/config.toml`. The file is created automatically on first run with sensible defaults.
 
 ```toml
 # Active UI theme
 active_theme = "dracula"
 
 # Optional: path to a custom CSS file to inject into the Notion interface
-# custom_css_path = "/home/user/.config/lotion/my-theme.css"
+# custom_css_path = "/home/user/.config/lotion-rs/my-theme.css"
 
 # Whether to restore open tabs on next launch
 restore_tabs = true

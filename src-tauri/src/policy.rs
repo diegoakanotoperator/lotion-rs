@@ -182,7 +182,7 @@ mod tests {
     fn test_validate_external_links() {
         let policy = PolicyManager::new();
         assert!(
-            policy.validate_external_link("https://github.com/diegoakanottheoperator/lotion-rs")
+            policy.validate_external_link("https://github.com/diegoakanotoperator/lotion-rs")
         );
         assert!(policy.validate_external_link("mailto:support@notion.so"));
         assert!(!policy.validate_external_link("http://unsecure-link.com"));

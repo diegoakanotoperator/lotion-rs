@@ -38,11 +38,11 @@ impl Default for LotionConfig {
 }
 
 impl LotionConfig {
-    /// Returns the config directory path (~/.config/lotion/)
+    /// Returns the config directory path (~/.config/lotion-rs/)
     fn config_dir() -> PathBuf {
         dirs::config_dir()
             .unwrap_or_else(|| PathBuf::from("."))
-            .join("lotion")
+            .join("lotion-rs")
     }
 
     /// Returns the config file path (~/.config/lotion/config.toml)

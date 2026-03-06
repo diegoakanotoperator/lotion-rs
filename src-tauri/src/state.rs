@@ -52,11 +52,11 @@ impl AppState {
         }
     }
 
-    /// Returns the state file path (~/.config/lotion/state.json)
+    /// Returns the state file path (~/.config/lotion-rs/state.json)
     fn state_path() -> std::path::PathBuf {
         dirs::config_dir()
             .unwrap_or_else(|| std::path::PathBuf::from("."))
-            .join("lotion")
+            .join("lotion-rs")
             .join("state.json")
     }
 
