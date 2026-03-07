@@ -116,9 +116,13 @@ impl TabController {
                 let url_str = url.as_str();
 
                 if popup_policy.should_route_popup_to_system_browser(url_str) {
-                    log::info!("Routing new window request (popup) to system browser: {}", url_str);
-                    #[allow(deprecated)]
-                    let _ = popup_app.shell().open(url_str.to_string(), None);
+                    if popup_policy.validate_external_link(url_str) {
+                        log::info!("Routing new window request (popup) to system browser: {}", url_str);
+                        #[allow(deprecated)]
+                        let _ = popup_app.shell().open(url_str.to_string(), None);
+                    } else {
+                        log::warn!("Zero-Trust: BLOCKED unauthorized popup attempt to: {}", url_str);
+                    }
                     tauri::webview::NewWindowResponse::Deny
                 } else {
                     // Spawn a controlled popup using the recursive secure factory

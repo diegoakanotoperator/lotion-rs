@@ -36,6 +36,11 @@ impl PolicyEnforcer for PolicyManager {
         log::debug!("PolicyManager: Validating URL: {}", url);
         // Parse URL and check if host is in allowed_domains
         if let Ok(parsed_url) = url::Url::parse(url) {
+            if parsed_url.scheme() != "https" {
+                log::warn!("PolicyManager: BLOCKED non-HTTPS URL scheme: {}", url);
+                return false;
+            }
+
             if let Some(host) = parsed_url.host_str() {
                 if self.is_official_notion(host) {
                     log::debug!("PolicyManager: ALLOWED official Notion domain: {}", host);
