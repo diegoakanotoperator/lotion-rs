@@ -157,8 +157,8 @@ sudo apt-get install -y \
 Xcode Command Line Tools are sufficient. No extra dependencies required.
 
 **Windows:**
-- [Visual Studio Build Tools](https://visualstudio.microsoft.com/visual-cpp-build-tools/)
-- [vcpkg](https://vcpkg.io/) (for `hunspell`)
+- **[Visual Studio Build Tools](https://visualstudio.microsoft.com/visual-cpp-build-tools/)** (Required for C++ compilation)
+- **[vcpkg](https://vcpkg.io/)** (Required to provide the `hunspell` dependency)
 
 **All platforms:**
 ```bash
