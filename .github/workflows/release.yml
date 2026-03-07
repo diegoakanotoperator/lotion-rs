@@ -136,19 +136,12 @@ jobs:
           export SDKROOT=$(xcrun --show-sdk-path)
           export LIBCLANG_PATH="$(brew --prefix llvm)/lib"
           export DYLD_LIBRARY_PATH="$(brew --prefix llvm)/lib"
-          export APPLE_CERTIFICATE="${{ secrets.APPLE_CERTIFICATE }}"
-          export APPLE_CERTIFICATE_PASSWORD="${{ secrets.APPLE_CERTIFICATE_PASSWORD }}"
           echo "LIBCLANG_PATH: $LIBCLANG_PATH"
           ls -la "$LIBCLANG_PATH" | head -20
           cargo tauri build --target x86_64-apple-darwin
         env:
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
-          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
-          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
-          APPLE_ID: ${{ secrets.APPLE_ID }}
-          APPLE_ID_PASSWORD: ${{ secrets.APPLE_ID_PASSWORD }}
-          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
 
       - name: Stage bundles
         run: |
@@ -204,19 +197,12 @@ jobs:
           export SDKROOT=$(xcrun --show-sdk-path)
           export LIBCLANG_PATH="$(brew --prefix llvm)/lib"
           export DYLD_LIBRARY_PATH="$(brew --prefix llvm)/lib"
-          export APPLE_CERTIFICATE="${{ secrets.APPLE_CERTIFICATE }}"
-          export APPLE_CERTIFICATE_PASSWORD="${{ secrets.APPLE_CERTIFICATE_PASSWORD }}"
           echo "LIBCLANG_PATH: $LIBCLANG_PATH"
           ls -la "$LIBCLANG_PATH" | head -20
           cargo tauri build --target aarch64-apple-darwin
         env:
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
-          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
-          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
-          APPLE_ID: ${{ secrets.APPLE_ID }}
-          APPLE_ID_PASSWORD: ${{ secrets.APPLE_ID_PASSWORD }}
-          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
 
       - name: Stage bundles
         run: |
