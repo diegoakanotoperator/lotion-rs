@@ -13,6 +13,11 @@
 
 [Learn more about GitHub Sponsors](https://github.com/sponsors/diegoakanotoperator)
 
+**Ethereum (ETH / ERC-20):**
+```
+0xe7254b9a20a95658167a84120a84dce9326ef3ac
+```
+
 ---
 
 <p align="center">
@@ -270,6 +275,11 @@ Your support helps keep this project independent and focused on user privacy.
 *Diego Aka Not Operator*
 
 [Learn more about GitHub Sponsors](https://github.com/sponsors/diegoakanotoperator)
+
+**Ethereum (ETH / ERC-20):**
+```
+0xe7254b9a20a95658167a84120a84dce9326ef3ac
+```
 
 ---
 
