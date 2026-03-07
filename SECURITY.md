@@ -35,8 +35,8 @@ The application implements several layers of defense-in-depth to protect users f
 
 If you discover a security vulnerability, please report it privately. You can contact the maintainer directly through the following channels:
 
-- **Email**: [security@lotion-rs.io](mailto:security@lotion-rs.io) (Note: Replace with your actual security contact if different)
-- **GitHub Private Vulnerability Reporting**: Use the "Report a vulnerability" button on the repository's Security tab if available.
+- **Email**: [diegoakanotoperator@users.noreply.github.com](mailto:diegoakanotoperator@users.noreply.github.com)
+- **GitHub Private Vulnerability Reporting**: Use the "Report a vulnerability" button on the [repository's Security tab](https://github.com/diegoakanotoperator/lotion-rs/security/advisories/new) (preferred).
 
 Please include as much information as possible, including:
 - A description of the vulnerability.
