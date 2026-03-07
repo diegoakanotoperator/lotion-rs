@@ -17,7 +17,7 @@ tokio = { version = "1.0", features = ["full"] }
 url = "2.5"
 toml = "0.8"
 dirs = "5.0"
-hunspell-rs = "0.3.0"
+hunspell-rs = "0.4.0"
 fluent = "0.16"
 
 [build-dependencies]
