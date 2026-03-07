@@ -3,9 +3,11 @@
 
 //! # LiteBox (OS-Level Sandboxing)
 //!
-//! Provides true OS-level process isolation and sandboxing capabilities.
-//! This is a structural enforcement engine implementing Windows Sandbox/AppContainer
-//! and Linux Namespace/Seccomp boundaries.
+//! [EXPERIMENTAL] Provides OS-level process isolation hints and resource dropping.
+//! Note: While this module implements initial Windows Job Objects and Linux
+//! PR_SET_NO_NEW_PRIVS boundaries, it is currently a defense-in-depth layer
+//! and does not yet provide full filesystem/network jail isolation.
+//! Use with caution in high-risk environments.
 
 use crate::traits::SecuritySandbox;
 

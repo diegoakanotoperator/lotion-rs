@@ -39,97 +39,9 @@ impl TabController {
             .parse::<Url>()
             .map_err(|e| tauri::Error::AssetNotFound(e.to_string()))?;
 
-        // Create a new webview for this tab
-        let mut webview_builder = WebviewBuilder::new(&tab_id, WebviewUrl::External(url.clone()));
-
-        let nav_app = app.clone();
-        let nav_policy = policy.clone();
-        let popup_app = app.clone();
-        let popup_policy = policy.clone();
-
-        let window_id_clone = window_id.to_string();
-        webview_builder = webview_builder
-            .on_navigation(move |url| {
-                let window_id = &window_id_clone;
-                let url_str = url.as_str();
-
-                // Intercept custom window control actions
-                if url_str.starts_with("lotion-action://") {
-                    let action = url_str.strip_prefix("lotion-action://").unwrap_or("");
-                    log::info!("Intercepted Lotion action: {}", action);
-
-                    if let Some(w) = nav_app.get_window(window_id) {
-                        match action {
-                            "window:close" => {
-                                let _ = w.close();
-                            }
-                            "window:minimize" => {
-                                let _ = w.minimize();
-                            }
-                            "window:maximize" => {
-                                if let Ok(true) = w.is_maximized() {
-                                    let _ = w.unmaximize();
-                                } else {
-                                    let _ = w.maximize();
-                                }
-                            }
-                            "tab:new" => {
-                                let notion_url = "https://www.notion.so";
-                                if let Some(orchestrator) = nav_app.try_state::<Arc<dyn crate::traits::TabOrchestrator>>() {
-                                    if let Ok(new_id) = orchestrator.inner().create_tab(&nav_app, window_id, notion_url) {
-                                        let _ = orchestrator.inner().show_tab(&new_id);
-
-                                        // Update AppState
-                                        if let Some(state_lock) = nav_app.try_state::<Arc<tokio::sync::Mutex<crate::state::AppState>>>() {
-                                            let mut app_state = state_lock.blocking_lock();
-                                            if let Some(w_state) = app_state.windows.get_mut(window_id) {
-                                                w_state.tab_ids.push(new_id);
-                                                let _ = app_state.save_to_disk();
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                            _ => {
-                                log::warn!("Unknown Lotion action: {}", action);
-                            }
-                        }
-                    }
-                    return false; // Prevent actual navigation
-                }
-
-                if nav_policy.validate_url(url_str) {
-                    true // Allow internal navigation to Notion
-                } else if nav_policy.validate_external_link(url_str) {
-                    log::info!("Zero-Trust: Opening validated external link in default browser: {}", url_str);
-                    use tauri_plugin_shell::ShellExt;
-                    #[allow(deprecated)]
-                    let _ = nav_app.shell().open(url_str.to_string(), None);
-                    false // Block navigation in the webview
-                } else {
-                    log::warn!("Zero-Trust: BLOCKED unauthorized navigation attempt to: {}", url_str);
-                    false // Block everything else
-                }
-            })
-            .on_new_window(move |url, _| {
-                use tauri_plugin_shell::ShellExt;
-                let url_str = url.as_str();
-
-                if popup_policy.should_route_popup_to_system_browser(url_str) {
-                    if popup_policy.validate_external_link(url_str) {
-                        log::info!("Routing new window request (popup) to system browser: {}", url_str);
-                        #[allow(deprecated)]
-                        let _ = popup_app.shell().open(url_str.to_string(), None);
-                    } else {
-                        log::warn!("Zero-Trust: BLOCKED unauthorized popup attempt to: {}", url_str);
-                    }
-                    tauri::webview::NewWindowResponse::Deny
-                } else {
-                    // Spawn a controlled popup using the recursive secure factory
-                    spawn_secure_popup(&popup_app, popup_policy.clone(), url.clone());
-                    tauri::webview::NewWindowResponse::Deny
-                }
-            });
+        // Create a new webview for this tab using the secure factory
+        let webview_builder =
+            create_secure_webview_builder(app, &tab_id, &url, window_id, policy.clone());
 
         let inner_size = window.inner_size()?;
         let webview = window.add_child(
@@ -443,4 +355,123 @@ pub fn spawn_secure_popup(app: &AppHandle, _policy: Arc<dyn PolicyEnforcer>, url
     } else {
         log::error!("Zero-Trust: Cannot spawn tab securely. TabOrchestrator missing from state.");
     }
+}
+
+/// A centralized factory for creating WebviewBuilders with guaranteed security listeners.
+/// Ensures all created webviews (tabs or popups) enforce on_navigation and on_new_window policies.
+pub fn create_secure_webview_builder(
+    app: &AppHandle,
+    label: &str,
+    url: &Url,
+    window_id: &str,
+    policy: Arc<dyn PolicyEnforcer>,
+) -> WebviewBuilder {
+    let mut webview_builder = WebviewBuilder::new(label, WebviewUrl::External(url.clone()));
+
+    let nav_app = app.clone();
+    let nav_policy = policy.clone();
+    let popup_app = app.clone();
+    let popup_policy = policy.clone();
+    let window_id_owned = window_id.to_string();
+
+    webview_builder
+        .on_navigation(move |url| {
+            let window_id = &window_id_owned;
+            let url_str = url.as_str();
+
+            // Intercept custom window control actions
+            if url_str.starts_with("lotion-action://") {
+                let action = url_str.strip_prefix("lotion-action://").unwrap_or("");
+                log::info!("Intercepted Lotion action: {}", action);
+
+                if let Some(w) = nav_app.get_window(window_id) {
+                    match action {
+                        "window:close" => {
+                            let _ = w.close();
+                        }
+                        "window:minimize" => {
+                            let _ = w.minimize();
+                        }
+                        "window:maximize" => {
+                            if let Ok(true) = w.is_maximized() {
+                                let _ = w.unmaximize();
+                            } else {
+                                let _ = w.maximize();
+                            }
+                        }
+                        "tab:new" => {
+                            let notion_url = "https://www.notion.so";
+                            if let Some(orchestrator) =
+                                nav_app.try_state::<Arc<dyn crate::traits::TabOrchestrator>>()
+                            {
+                                if let Ok(new_id) =
+                                    orchestrator.inner().create_tab(&nav_app, window_id, notion_url)
+                                {
+                                    let _ = orchestrator.inner().show_tab(&new_id);
+
+                                    // Update AppState
+                                    if let Some(state_lock) = nav_app.try_state::<Arc<
+                                        tokio::sync::Mutex<crate::state::AppState>,
+                                    >>() {
+                                        let mut app_state = state_lock.blocking_lock();
+                                        if let Some(w_state) = app_state.windows.get_mut(window_id) {
+                                            w_state.tab_ids.push(new_id);
+                                            let _ = app_state.save_to_disk();
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        _ => {
+                            log::warn!("Unknown Lotion action: {}", action);
+                        }
+                    }
+                }
+                return false; // Prevent actual navigation
+            }
+
+            if nav_policy.validate_url(url_str) {
+                true // Allow internal navigation to Notion
+            } else if nav_policy.validate_external_link(url_str) {
+                log::info!(
+                    "Zero-Trust: Opening validated external link in default browser: {}",
+                    url_str
+                );
+                use tauri_plugin_shell::ShellExt;
+                #[allow(deprecated)]
+                let _ = nav_app.shell().open(url_str.to_string(), None);
+                false // Block navigation in the webview
+            } else {
+                log::warn!(
+                    "Zero-Trust: BLOCKED unauthorized navigation attempt to: {}",
+                    url_str
+                );
+                false // Block everything else
+            }
+        })
+        .on_new_window(move |url, _| {
+            use tauri_plugin_shell::ShellExt;
+            let url_str = url.as_str();
+
+            if popup_policy.should_route_popup_to_system_browser(url_str) {
+                if popup_policy.validate_external_link(url_str) {
+                    log::info!(
+                        "Routing new window request (popup) to system browser: {}",
+                        url_str
+                    );
+                    #[allow(deprecated)]
+                    let _ = popup_app.shell().open(url_str.to_string(), None);
+                } else {
+                    log::warn!(
+                        "Zero-Trust: BLOCKED unauthorized popup attempt to: {}",
+                        url_str
+                    );
+                }
+                tauri::webview::NewWindowResponse::Deny
+            } else {
+                // Spawn a controlled popup using the recursive secure factory
+                spawn_secure_popup(&popup_app, popup_policy.clone(), url.clone());
+                tauri::webview::NewWindowResponse::Deny
+            }
+        })
 }

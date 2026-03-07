@@ -33,7 +33,7 @@
 
 **Lotion-rs** is a complete port of that concept into Rust. It replaces the Electron/Node.js stack with [Tauri v2](https://v2.tauri.app/) for OS integration and a native injected UI, eliminating the heavy runtime overhead of a Chromium-based shell while adding a hardened, Zero-Trust security model aligned with the [SecByDesign Collective Manifesto](https://github.com/SecByDesignCollective/Manifesto).
 
-The result is a fast, memory-efficient, privacy-respecting Notion client that runs natively on Linux — and nowhere compromises on security.
+The result is a fast, memory-efficient, privacy-respecting Notion client that runs natively on Linux — and nowhere compromises on security. v0.2.4 introduces significant security hardening for domain validation and process isolation.
 
 ---
 
@@ -107,8 +107,8 @@ This project is developed in the spirit of the [Zero-Trust Engineering Manifesto
 
 What that means in practice for Lotion-rs:
 
-- **Zero-Trust by Default** — No network segment is trusted. The application enforces strict Content Security Policies and allows only verified Notion domains.
-- **LiteBox Sandboxing** — The Notion WebView runs in an isolated sandbox. Navigation to arbitrary URLs is blocked at the policy layer before a request is even made.
+- **Zero-Trust by Default** — No network segment is trusted. v0.2.4 enforces strict HTTPS schemes and exact subdomain matching for Notion and OAuth providers.
+- **LiteBox Sandboxing** — [EXPERIMENTAL] The Notion WebView runs with OS-level process isolation (Job Objects on Windows, `NO_NEW_PRIVS` on Linux). Navigation to non-allowlisted domains is intercepted and either blocked or routed to the system browser.
 - **Least Privilege** — The application requests only the OS permissions it requires. No access to your filesystem beyond `~/.config/lotion-rs/`.
 - **Anti-Telemetry** — No usage data, analytics, or crash reports are sent anywhere. What happens on your machine stays on your machine.
 - **Fail-Safe Defaults** — If configuration is missing or malformed, the application falls back to safe, hardened defaults rather than failing open.
@@ -125,8 +125,8 @@ What that means in practice for Lotion-rs:
 - **System Tray Integration** — Minimise to tray and restore from tray without losing your session.
 
 ### Security
-- **LiteBox WebView Sandbox** — The Notion WebView is isolated; only `notion.so` and its authorised subdomains may load content.
-- **Strict Navigation Policy** — Requests to external domains are intercepted and either blocked or delegated to the system browser.
+- **LiteBox WebView Sandbox** — The Notion WebView is isolated; only `notion.so` and its authorised subdomains may load content. (Requires WebKitGTK sandboxing support on Linux).
+- **Strict Navigation Policy** — Requests to external domains or non-HTTPS schemes are intercepted and either blocked or delegated to the system browser via a secure protocol validation layer.
 - **No Remote Telemetry** — Zero data exfiltration. No analytics, no crash reporting pipeline, no "phone home".
 
 ### Customisation
@@ -263,7 +263,7 @@ See [`.github/workflows/release.yml`](.github/workflows/release.yml) for the ful
 - **[sysdrum/notion-app](https://github.com/sysdrum/notion-app)** — Early inspiration referenced in the original Lotion project.
 - **[SecByDesign Collective](https://github.com/SecByDesignCollective/Manifesto)** — The Zero-Trust Engineering Manifesto, which defines the security philosophy this project is built on.
 - **[Tauri v2](https://v2.tauri.app/)** — The framework that makes a lightweight, cross-platform, Rust-native desktop app possible.
-- **[Microsoft LiteBox](https://github.com/microsoft/LiteBox)** — The sandboxing technology used to isolate the Notion WebView, providing the Zero-Trust process containment layer at the core of Lotion-rs's security model.
+- **[Microsoft LiteBox](https://github.com/microsoft/LiteBox)** — Inspiration for the sandboxing technology used to provide OS-level process containment layers within the application.
 
 ---
 

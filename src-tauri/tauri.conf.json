@@ -1,17 +1,17 @@
 {
     "productName": "lotion-rs",
-    "version": "0.2.3",
-    "identifier": "com.lotion.rs",
+    "version": "0.2.4",
+    "identifier": "io.lotion-rs.secure.v2",
     "build": {
         "frontendDist": "assets"
     },
     "plugins": {
         "updater": {
             "endpoints": [
-                "https://example.com/update/{{target}}/{{current_version}}"
+                "https://github.com/diegoakanotoperator/lotion-rs/releases/latest/download/latest.json"
             ],
             "dialog": true,
-            "pubkey": "dW5kZWZpbmVk"
+            "pubkey": "RWQhTlzddEshBnJi6I3/4hCBdm7SXccxHwTzheJthapxNSndxGC00LRIY"
         }
     },
     "app": {
