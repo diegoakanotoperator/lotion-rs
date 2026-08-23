@@ -24,8 +24,10 @@ pub fn apply_windows_sandbox() -> Result<(), String> {
         let mut info: JOBOBJECT_EXTENDED_LIMIT_INFORMATION = std::mem::zeroed();
         info.BasicLimitInformation.LimitFlags = JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE 
             | JOB_OBJECT_LIMIT_DIE_ON_UNHANDLED_EXCEPTION
-            | JOB_OBJECT_LIMIT_ACTIVE_PROCESS;
-        info.BasicLimitInformation.ActiveProcessLimit = 10; // Allow some overhead for Tauri/WebView workers
+            | JOB_OBJECT_LIMIT_ACTIVE_PROCESS
+            | JOB_OBJECT_LIMIT_SILENT_BREAKAWAY_OK;
+        // WebView2 manages its own Chromium sandbox and must create child process jobs.
+        info.BasicLimitInformation.ActiveProcessLimit = 10;
 
         let res = SetInformationJobObject(
             job,

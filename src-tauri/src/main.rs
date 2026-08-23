@@ -362,9 +362,12 @@ fn main() {
             match lotion_rs::window_controller::WindowController::<tauri::Wry>::new(&handle, security_state) {
                 Ok(wc) => {
                     wc.setup_listeners(handle.clone());
-                    if let Err(e) = wc.setup_tabs(&handle) {
-                        log::error!("Failed to set up tabs: {}", e);
-                    }
+                    let setup_handle = handle.clone();
+                    std::thread::spawn(move || {
+                        if let Err(e) = wc.setup_tabs(&setup_handle) {
+                            log::error!("Failed to set up tabs: {}", e);
+                        }
+                    });
                     log::info!("WindowController initialized and set up.");
                 }
                 Err(e) => {
