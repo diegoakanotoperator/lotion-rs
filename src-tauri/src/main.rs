@@ -1,3 +1,5 @@
+#![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
+
 use lotion_rs::policy::PolicyManager;
 use lotion_rs::security::SecurityModule;
 use lotion_rs::theming::ThemeManager;
