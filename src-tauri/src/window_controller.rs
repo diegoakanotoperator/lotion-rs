@@ -12,7 +12,7 @@ impl<R: Runtime> WindowController<R> {
         let window = WindowBuilder::new(app, "main")
             .title("lotion-rs")
             .inner_size(1200.0, 768.0)
-            .decorations(false) // Custom injected Mac-like titlebar handles this now
+            .decorations(cfg!(target_os = "windows"))
             .build()?;
 
         // Ensure window state exists in AppState
