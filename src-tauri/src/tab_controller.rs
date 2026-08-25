@@ -83,6 +83,8 @@ impl<R: Runtime> TabController<R> {
 
                 // 2. Inject Native-feeling Window Controls (Titlebar)
                 window.addEventListener('DOMContentLoaded', () => {{
+                    if ({2}) return;
+
                     const titlebar = document.createElement('div');
                     titlebar.id = 'lotion-custom-titlebar';
                     titlebar.setAttribute('data-tauri-drag-region', '');
@@ -248,7 +250,9 @@ impl<R: Runtime> TabController<R> {
                 }});
             }})();
         "#,
-            tab_id, window_id
+            tab_id,
+            window_id,
+            cfg!(target_os = "windows")
         );
         let _ = webview.eval(&title_observer_js);
 
